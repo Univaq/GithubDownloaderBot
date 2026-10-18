@@ -14,7 +14,7 @@ from handlers.releases import (
     show_github_error,
 )
 from keyboards.inline import releases_keyboard
-from repositories.jobs import create_selection, enqueue_selection
+from repositories.jobs import create_selection, enqueue_selection, is_favorite
 from services.callback_cache import get_release, get_repository
 from services.github import (
     GitHubError,
