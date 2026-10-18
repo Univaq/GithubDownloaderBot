@@ -17,8 +17,21 @@ class FakeJobRepository:
     async def claim_next(self):
         return None
 
-    async def set_status(self, job_id, status, *, error=None):
-        self.updated = (job_id, status, error)
+    async def set_status(self, job_id, status, *, expected_status, error=None):
+        if self.job is None or self.job.status is not expected_status:
+            return False
+        self.updated = (job_id, status, expected_status, error)
+        self.job = DownloadJob(
+            id=self.job.id,
+            user_id=self.job.user_id,
+            chat_id=self.job.chat_id,
+            source_url=self.job.source_url,
+            job_type=self.job.job_type,
+            file_name=self.job.file_name,
+            status=status,
+            created_at=self.job.created_at,
+            error=error,
+        )
         return True
 
     async def count_queued(self):
