@@ -1,0 +1,31 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Python bytecode and test tooling
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Runtime data and temporary files
+data/*.db
+data/*.db-*
+downloads/
+*.tmp
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
