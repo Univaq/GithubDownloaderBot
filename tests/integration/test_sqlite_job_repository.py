@@ -82,3 +82,47 @@ async def test_claim_next_returns_none_for_empty_queue(tmp_path):
         await db.commit()
     repository = SQLiteJobRepository(db_path)
     assert await repository.claim_next() is None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_claims_return_a_job_to_only_one_worker(tmp_path):
+    import asyncio
+
+    db_path = tmp_path / "jobs.db"
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            """CREATE TABLE jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                chat_id INTEGER NOT NULL,
+                repo_url TEXT NOT NULL,
+                job_type TEXT NOT NULL DEFAULT 'source',
+                file_name TEXT,
+                status TEXT NOT NULL DEFAULT 'queued',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                error TEXT,
+                queue_message_id INTEGER,
+                queue_chat_id INTEGER
+            )"""
+        )
+        await db.execute(
+            "INSERT INTO jobs (user_id, chat_id, repo_url) VALUES (?, ?, ?)",
+            (42, 99, "https://github.com/example/project/archive/main.zip"),
+        )
+        await db.commit()
+
+    first_worker = SQLiteJobRepository(db_path)
+    second_worker = SQLiteJobRepository(db_path)
+
+    claimed_jobs = await asyncio.gather(
+        first_worker.claim_next(),
+        second_worker.claim_next(),
+    )
+
+    successful_claims = [job for job in claimed_jobs if job is not None]
+    assert len(successful_claims) == 1
+    assert successful_claims[0].id == 1
+    assert successful_claims[0].status is JobStatus.RUNNING
+    assert await first_worker.count_queued() == 0
+    assert await second_worker.claim_next() is None
