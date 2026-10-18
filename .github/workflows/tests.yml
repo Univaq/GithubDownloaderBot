@@ -1,8 +1,7 @@
 name: Tests
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
