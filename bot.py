@@ -9,6 +9,8 @@ from aiogram.client.telegram import TelegramAPIServer
 from config import settings
 from handlers.start import router as start_router
 from handlers.search import router as search_router
+from handlers.repository import router as repository_router
+from handlers.source_code import router as source_code_router
 from handlers.releases import router as releases_router
 from handlers.release_assets import router as release_assets_router
 from handlers.readme import router as readme_router
@@ -70,6 +72,8 @@ async def main() -> None:
 
     dp.include_router(start_router)
     dp.include_router(search_router)
+    dp.include_router(repository_router)
+    dp.include_router(source_code_router)
     dp.include_router(releases_router)
     dp.include_router(release_assets_router)
     dp.include_router(readme_router)
