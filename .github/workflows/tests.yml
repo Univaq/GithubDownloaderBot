@@ -15,4 +15,6 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e '.[test]'
+      - run: python -m compileall -q bot.py handlers keyboards repositories services workers src tests
+      - run: BOT_TOKEN=123456:TEST_TOKEN python -c "import bot; assert bot.dp if hasattr(bot, 'dp') else True"
       - run: python -m pytest -q
