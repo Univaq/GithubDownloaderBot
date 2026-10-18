@@ -5,6 +5,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from keyboards.inline import download_completion_keyboard
 
 from handlers.releases import (
