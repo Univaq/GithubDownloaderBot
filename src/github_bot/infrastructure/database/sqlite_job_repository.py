@@ -71,13 +71,14 @@ class SQLiteJobRepository(JobRepository):
         job_id: int,
         status: JobStatus,
         *,
+        expected_status: JobStatus,
         error: str | None = None,
     ) -> bool:
         async with self._connections.connect() as db:
             cursor = await db.execute(
                 "UPDATE jobs SET status = ?, updated_at = CURRENT_TIMESTAMP, error = ? "
-                "WHERE id = ?",
-                (status.value, error[:500] if error else None, job_id),
+                "WHERE id = ? AND status = ?",
+                (status.value, error[:500] if error else None, job_id, expected_status.value),
             )
             await db.commit()
             return cursor.rowcount == 1
