@@ -3,6 +3,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
@@ -97,6 +98,11 @@ async def main() -> None:
     )
 
     try:
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Start the bot"),
+            BotCommand(command="repo", description="Search GitHub repositories"),
+        ])
+
         bot_info = await bot.get_me()
         logger.info(
             "Bot is ready: @%s",
@@ -115,10 +121,3 @@ async def main() -> None:
             await worker_task
         finally:
             await bot.session.close()
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Bot stopped.")
