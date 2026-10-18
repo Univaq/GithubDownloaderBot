@@ -272,6 +272,17 @@ async def perform_repository_search(
     try:
         repository_info = extract_github_repository(query)
 
+        # Accept owner/repository as an exact lookup as well as a full URL.
+        if repository_info is None:
+            plain_repo = query.strip().strip("/")
+            if re.fullmatch(
+                r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9_.-]+",
+                plain_repo,
+            ):
+                owner_part, repo_part = plain_repo.split("/", 1)
+                if repo_part not in {".", ".."} and not repo_part.endswith("."):
+                    repository_info = (owner_part, repo_part)
+
         async with GitHubService() as github:
             if repository_info:
                 owner, repo_name = repository_info
@@ -296,11 +307,28 @@ async def perform_repository_search(
             # Fetch at most two API pages, with ten repositories per page.
             # GitHub's default best-match ranking is more useful for names
             # such as "Pattng" than sorting every query by star count.
+            # Search repository names first. Generic GitHub search can bury
+            # a small/exact project name under README and description matches.
             repositories = await github.search_repositories(
-                query,
+                f"{query} in:name",
                 per_page=10,
                 max_results=20,
             )
+
+            if len(repositories) < 20:
+                broad_results = await github.search_repositories(
+                    query,
+                    per_page=10,
+                    max_results=20,
+                )
+                seen = {item["full_name"].casefold() for item in repositories}
+                for item in broad_results:
+                    key = item["full_name"].casefold()
+                    if key not in seen:
+                        repositories.append(item)
+                        seen.add(key)
+                    if len(repositories) >= 20:
+                        break
 
         if not repositories:
             await status_message.edit_text("No repositories were found.")
