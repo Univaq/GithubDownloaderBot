@@ -83,8 +83,12 @@ async def test_job_service_queue_capacity_uses_repository_count(tmp_path):
     repository = SQLiteJobRepository(database_path)
     service = JobService(repository, max_queue_size=2)
 
+    # One job is running, so only one of the two jobs occupies the queue.
+    assert await repository.set_status(
+        1, JobStatus.RUNNING, expected_status=JobStatus.QUEUED
+    )
     await service.ensure_queue_has_capacity()
 
-    # The configured capacity is reached once the two queued jobs are counted.
+    # The remaining queued job fills a queue whose capacity is one.
     with pytest.raises(QueueFullError):
         await JobService(repository, max_queue_size=1).ensure_queue_has_capacity()
