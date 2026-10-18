@@ -4,17 +4,44 @@ A Telegram bot for searching GitHub repositories and downloading repository sour
 
 ## Requirements
 
-- Python 3.12+
+- **Python 3.12 (recommended)**. Use the same version as CI to maximize availability of prebuilt Windows wheels for native dependencies such as `aiohttp` and `pydantic-core`.
 - A Telegram bot token
 - Optional: a GitHub personal access token for authenticated GitHub API requests
 
-## Local setup
+## Local setup (Windows PowerShell)
 
-1. Create and activate a virtual environment.
+Check that the Python 3.12 launcher is installed:
+
+```powershell
+py -3.12 --version
+```
+
+Create a clean virtual environment and install dependencies:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install --prefer-binary -e ".[test]"
+```
+
+If PowerShell blocks activation, you can skip activation and run:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install --prefer-binary -e ".[test]"
+```
+
+If you already created `.venv` with a different Python version, remove that environment first and recreate it with `py -3.12 -m venv .venv`. Do not install into an environment created by another Python version.
+
+## Linux/macOS setup
+
+1. Create and activate a Python 3.12 virtual environment.
 2. Install the project and test dependencies:
 
    ```bash
-   python -m pip install -e '.[test]'
+   python -m pip install --upgrade pip
+   python -m pip install --prefer-binary -e '.[test]'
    ```
 
 3. Create a `.env` file in the project root:
@@ -56,11 +83,10 @@ Run checks locally with:
 
 ```bash
 python -m compileall -q bot.py handlers keyboards repositories services workers src tests
-BOT_TOKEN=123456:TEST_TOKEN python -c "import bot"
 python -m pytest -q
 ```
 
-The GitHub Actions workflow is currently configured for manual dispatch only; pushes and pull requests do not start it automatically.
+On Windows, use the Python 3.12 environment created above. The GitHub Actions workflow is currently configured for manual dispatch only; pushes and pull requests do not start it automatically.
 
 ## Architecture
 
