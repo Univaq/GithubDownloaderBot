@@ -38,13 +38,13 @@ class SQLiteJobRepository(JobRepository):
         )
 
     async def get_by_id(self, job_id: int) -> DownloadJob | None:
-        async with await self._connections.connect() as db:
+        async with self._connections.connect() as db:
             cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
             row = await cursor.fetchone()
             return self._map_row(row) if row is not None else None
 
     async def claim_next(self) -> DownloadJob | None:
-        async with await self._connections.connect() as db:
+        async with self._connections.connect() as db:
             await db.execute("BEGIN IMMEDIATE")
             cursor = await db.execute(
                 "SELECT * FROM jobs WHERE status = 'queued' ORDER BY id LIMIT 1"
@@ -73,7 +73,7 @@ class SQLiteJobRepository(JobRepository):
         *,
         error: str | None = None,
     ) -> bool:
-        async with await self._connections.connect() as db:
+        async with self._connections.connect() as db:
             cursor = await db.execute(
                 "UPDATE jobs SET status = ?, updated_at = CURRENT_TIMESTAMP, error = ? "
                 "WHERE id = ?",
@@ -83,7 +83,7 @@ class SQLiteJobRepository(JobRepository):
             return cursor.rowcount == 1
 
     async def count_queued(self) -> int:
-        async with await self._connections.connect() as db:
+        async with self._connections.connect() as db:
             cursor = await db.execute("SELECT COUNT(*) FROM jobs WHERE status = 'queued'")
             row = await cursor.fetchone()
             return int(row[0]) if row else 0
