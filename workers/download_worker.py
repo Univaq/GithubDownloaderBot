@@ -30,6 +30,19 @@ class WorkerJobGateway(Protocol):
     async def mark_failed(self, job_id: int, error: str) -> bool: ...
 
 
+class LegacyWorkerPersistence:
+    """Adapt the existing repository functions to the worker gateway contract."""
+
+    async def claim_next_payload(self) -> dict[str, object] | None:
+        return await claim_next_job()
+
+    async def mark_completed(self, job_id: int) -> bool:
+        return await finish_job(job_id)
+
+    async def mark_failed(self, job_id: int, error: str) -> bool:
+        return await fail_job(job_id, error)
+
+
 class ProgressInputFile(InputFile):
     def __init__(
         self,
@@ -294,14 +307,13 @@ async def worker_loop(
     *,
     job_gateway: WorkerJobGateway | None = None,
 ) -> None:
-    """Run the worker with legacy persistence by default."""
+    """Run the worker through one gateway; legacy persistence remains default."""
+    gateway: WorkerJobGateway = (
+        job_gateway if job_gateway is not None else LegacyWorkerPersistence()
+    )
     while not stop_event.is_set():
         try:
-            job = (
-                await job_gateway.claim_next_payload()
-                if job_gateway is not None
-                else await claim_next_job()
-            )
+            job = await gateway.claim_next_payload()
         except Exception:
             logger.exception(
                 "Could not claim the next download job"
@@ -338,10 +350,9 @@ async def worker_loop(
             )
 
             try:
-                marked_failed = (
-                    await job_gateway.mark_failed(job["id"], str(exc))
-                    if job_gateway is not None
-                    else await fail_job(job["id"], str(exc))
+                marked_failed = await gateway.mark_failed(
+                    job["id"],
+                    str(exc),
                 )
 
                 if not marked_failed:
@@ -370,11 +381,7 @@ async def worker_loop(
 
         else:
             try:
-                marked_completed = (
-                    await job_gateway.mark_completed(job["id"])
-                    if job_gateway is not None
-                    else await finish_job(job["id"])
-                )
+                marked_completed = await gateway.mark_completed(job["id"])
 
                 if not marked_completed:
                     logger.error(
