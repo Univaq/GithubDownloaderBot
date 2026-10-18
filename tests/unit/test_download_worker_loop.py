@@ -63,3 +63,25 @@ async def test_worker_loop_marks_processing_failure_and_notifies_user(monkeypatc
         text="Download or upload failed. Please try again later.",
     )
     finish_mock.assert_not_awaited()
+
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_stops_cleanly_when_idle(monkeypatch):
+    stop_event = asyncio.Event()
+    bot = AsyncMock()
+
+    async def claim_nothing():
+        stop_event.set()
+        return None
+
+    claim_mock = AsyncMock(side_effect=claim_nothing)
+    monkeypatch.setattr(worker, "claim_next_job", claim_mock)
+    process_mock = AsyncMock()
+    monkeypatch.setattr(worker, "process_download_job", process_mock)
+
+    await worker.worker_loop(bot, stop_event)
+
+    claim_mock.assert_awaited_once_with()
+    process_mock.assert_not_awaited()
+    bot.send_message.assert_not_awaited()
