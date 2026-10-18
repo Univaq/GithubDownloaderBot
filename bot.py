@@ -10,6 +10,7 @@ from config import settings
 from handlers.start import router as start_router
 from handlers.search import router as search_router
 from handlers.releases import router as releases_router
+from handlers.readme import router as readme_router
 from handlers.menu import router as menu_router
 from handlers.favorites import router as favorites_router
 from repositories.jobs import initialize_database
@@ -69,6 +70,7 @@ async def main() -> None:
     dp.include_router(start_router)
     dp.include_router(search_router)
     dp.include_router(releases_router)
+    dp.include_router(readme_router)
     dp.include_router(menu_router)
     dp.include_router(favorites_router)
 
