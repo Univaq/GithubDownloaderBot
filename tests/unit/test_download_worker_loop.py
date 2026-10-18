@@ -51,7 +51,9 @@ async def test_worker_loop_marks_processing_failure_and_notifies_user(monkeypatc
         return True
 
     fail_mock = AsyncMock(side_effect=fail)
+    finish_mock = AsyncMock(return_value=True)
     monkeypatch.setattr(worker, "fail_job", fail_mock)
+    monkeypatch.setattr(worker, "finish_job", finish_mock)
 
     await worker.worker_loop(bot, stop_event)
 
@@ -60,4 +62,4 @@ async def test_worker_loop_marks_processing_failure_and_notifies_user(monkeypatc
         chat_id=35,
         text="Download or upload failed. Please try again later.",
     )
-    worker.finish_job.assert_not_called()
+    finish_mock.assert_not_awaited()
