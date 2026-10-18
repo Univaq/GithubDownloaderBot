@@ -18,6 +18,8 @@ from handlers.menu import router as menu_router
 from handlers.favorites import router as favorites_router
 from repositories.jobs import initialize_database
 from workers.download_worker import worker_loop
+from github_bot.infrastructure.database.sqlite_job_repository import SQLiteJobRepository
+from github_bot.workers.legacy_worker_gateway import LegacyWorkerJobGateway
 
 
 logging.basicConfig(
@@ -80,8 +82,17 @@ async def main() -> None:
     dp.include_router(menu_router)
     dp.include_router(favorites_router)
 
+    job_gateway = None
+    if settings.use_sqlite_worker_gateway:
+        job_gateway = LegacyWorkerJobGateway(
+            SQLiteJobRepository(settings.database_path)
+        )
+        logger.warning(
+            "Using the new SQLite worker gateway; monitor job processing closely."
+        )
+
     worker_task = asyncio.create_task(
-        worker_loop(bot, stop_event),
+        worker_loop(bot, stop_event, job_gateway=job_gateway),
         name="download-worker",
     )
 
