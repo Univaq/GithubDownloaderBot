@@ -354,3 +354,40 @@ def search_keyboard() -> InlineKeyboardMarkup:
 
     builder.adjust(1)
     return builder.as_markup()
+
+def download_completion_keyboard(
+    full_name: str | None,
+    *,
+    readme: bool = False,
+) -> InlineKeyboardMarkup:
+    """Actions shown after a downloaded file has been sent."""
+    builder = InlineKeyboardBuilder()
+
+    if full_name and full_name.count("/") == 1:
+        repository_id = store_repository(full_name)
+        if not readme:
+            builder.button(
+                text="📥 Download another file",
+                callback_data=_validate_callback_data(
+                    f"download:another:{repository_id}"
+                ),
+            )
+        builder.button(
+            text="📁 Back to Repository",
+            callback_data=_validate_callback_data(
+                f"back:repo:{repository_id}"
+            ),
+        )
+    else:
+        builder.button(
+            text="🔎 Search Again",
+            callback_data=_validate_callback_data("search:again"),
+        )
+
+    builder.button(
+        text="🏠 Main Menu",
+        callback_data=_validate_callback_data("menu:main"),
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
