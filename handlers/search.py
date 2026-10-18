@@ -155,6 +155,12 @@ async def search_from_saved_prompt(
     chat_id = data.get("search_prompt_chat_id")
     message_id = data.get("search_prompt_message_id")
 
+    # Remove the user's query message so the chat only shows the search results.
+    try:
+        await message.delete()
+    except TelegramBadRequest as exc:
+        logger.debug("Could not delete the user's search query: %s", exc)
+
     await state.clear()
 
     user_id = message.from_user.id if message.from_user else None
@@ -287,11 +293,12 @@ async def perform_repository_search(
                 )
                 return
 
-            # Request up to 100 results where supported by GitHubService.
+            # Keep the search to at most two pages of ten repositories.
             repositories = await github.search_repositories(
                 query,
-                per_page=100,
+                per_page=20,
             )
+            repositories = repositories[:20]
 
         if not repositories:
             await status_message.edit_text("No repositories were found.")
@@ -421,6 +428,28 @@ async def automatic_github_link_handler(
         message,
         message.text or "",
     )
+
+
+@router.callback_query(F.data == "search:again")
+async def search_again(callback: CallbackQuery, state: FSMContext) -> None:
+    if callback.message is None:
+        await callback.answer("Message unavailable.", show_alert=True)
+        return
+
+    await callback.answer()
+    await state.set_state("waiting_for_repository_query")
+    await state.update_data(
+        search_prompt_chat_id=callback.message.chat.id,
+        search_prompt_message_id=callback.message.message_id,
+    )
+
+    try:
+        await callback.message.edit_text(
+            "🔎 Send a repository name, search query, or GitHub URL:",
+            reply_markup=search_mode_keyboard(),
+        )
+    except TelegramBadRequest as exc:
+        logger.warning("Could not display the search-again prompt: %s", exc)
 
 
 @router.callback_query(F.data.startswith("search_page:"))
