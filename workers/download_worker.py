@@ -5,12 +5,14 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Protocol
 from pathlib import Path
+from urllib.parse import urlparse
 
 import aiofiles
 from aiogram import Bot
 from aiogram.types.input_file import InputFile
 
 from config import settings
+from keyboards.inline import download_completion_keyboard
 from repositories.jobs import claim_next_job, fail_job, finish_job
 from services.downloader import download_to_temp, delete_temp_file
 
@@ -89,6 +91,32 @@ def make_progress_bar(
     filled = round(percent * width / 100)
 
     return "█" * filled + "░" * (width - filled)
+
+
+def repository_from_download_url(download_url: str) -> str | None:
+    """Infer owner/repository from common GitHub archive and release URLs."""
+    try:
+        parsed = urlparse(download_url)
+    except (TypeError, ValueError):
+        return None
+
+    host = (parsed.hostname or "").lower()
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+
+    if host == "api.github.com" and len(parts) >= 4 and parts[0] == "repos":
+        owner, repo = parts[1], parts[2]
+    elif host in {"github.com", "www.github.com", "codeload.github.com"} and len(parts) >= 2:
+        owner, repo = parts[0], parts[1]
+    else:
+        return None
+
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+
+    if not owner or not repo:
+        return None
+
+    return f"{owner}/{repo}"
 
 
 async def process_download_job(bot: Bot, job: dict) -> None:
@@ -263,6 +291,18 @@ async def process_download_job(bot: Bot, job: dict) -> None:
             ),
             caption="Download from GitHub completed successfully.",
         )
+
+        full_name = repository_from_download_url(str(job.get("repo_url") or ""))
+        try:
+            await bot.send_message(
+                chat_id=job["chat_id"],
+                text="✅ File sent successfully. What would you like to do next?",
+                reply_markup=download_completion_keyboard(full_name),
+            )
+        except Exception:
+            # The file is already delivered; a follow-up prompt failure must
+            # not turn a successful download into a failed job.
+            logger.exception("Could not send post-download action buttons")
 
     finally:
         if progress_message is not None:
