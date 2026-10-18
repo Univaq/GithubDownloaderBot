@@ -109,3 +109,34 @@ async def test_search_history_keeps_only_latest_twenty_per_user(isolated_databas
     other_user_history = await search_history.get_search_history(2)
     assert len(other_user_history) == 1
     assert other_user_history[0]["query"] == "private-query"
+
+
+@pytest.mark.asyncio
+async def test_database_startup_marks_interrupted_running_jobs_failed(
+    isolated_database,
+):
+    import aiosqlite
+
+    await database.initialize_database()
+    async with aiosqlite.connect(isolated_database) as db:
+        cursor = await db.execute(
+            """
+            INSERT INTO jobs (user_id, chat_id, repo_url, status)
+            VALUES (?, ?, ?, 'running')
+            """,
+            (99, 999, "https://example.test/interrupted.zip"),
+        )
+        job_id = cursor.lastrowid
+        await db.commit()
+
+    # Simulate a process restart: startup initialization repairs stale state.
+    await database.initialize_database()
+    async with aiosqlite.connect(isolated_database) as db:
+        cursor = await db.execute(
+            "SELECT status, error FROM jobs WHERE id = ?",
+            (job_id,),
+        )
+        status, error = await cursor.fetchone()
+
+    assert status == "failed"
+    assert error == "Interrupted by process restart"
