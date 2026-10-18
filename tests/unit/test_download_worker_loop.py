@@ -255,3 +255,42 @@ async def test_worker_loop_uses_injected_gateway_for_failure(monkeypatch):
         chat_id=40,
         text="Download or upload failed. Please try again later.",
     )
+
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_does_not_mark_injected_gateway_job_failed_when_completion_save_raises(
+    monkeypatch,
+):
+    job = {"id": 19, "chat_id": 41, "repo_url": "https://example.test/repo.zip"}
+    stop_event = asyncio.Event()
+    bot = AsyncMock()
+
+    class Gateway:
+        async def claim_next_payload(self):
+            return job
+
+        async def mark_completed(self, job_id):
+            assert job_id == 19
+            stop_event.set()
+            raise RuntimeError("completion store unavailable")
+
+        async def mark_failed(self, job_id, error):
+            raise AssertionError("must not convert completion-save failure to job failure")
+
+    process_mock = AsyncMock()
+    monkeypatch.setattr(worker, "process_download_job", process_mock)
+    legacy_claim = AsyncMock(side_effect=AssertionError("legacy claim used"))
+    legacy_finish = AsyncMock(side_effect=AssertionError("legacy finish used"))
+    legacy_fail = AsyncMock(side_effect=AssertionError("legacy failure used"))
+    monkeypatch.setattr(worker, "claim_next_job", legacy_claim)
+    monkeypatch.setattr(worker, "finish_job", legacy_finish)
+    monkeypatch.setattr(worker, "fail_job", legacy_fail)
+
+    await worker.worker_loop(bot, stop_event, job_gateway=Gateway())
+
+    process_mock.assert_awaited_once_with(bot, job)
+    legacy_claim.assert_not_awaited()
+    legacy_finish.assert_not_awaited()
+    legacy_fail.assert_not_awaited()
+    bot.send_message.assert_not_awaited()
