@@ -35,6 +35,8 @@ class SQLiteJobRepository(JobRepository):
             status=JobStatus(row["status"]),
             created_at=created_at,
             error=row["error"],
+            queue_message_id=row["queue_message_id"],
+            queue_chat_id=row["queue_chat_id"],
         )
 
     async def get_by_id(self, job_id: int) -> DownloadJob | None:
