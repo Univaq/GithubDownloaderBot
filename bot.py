@@ -121,3 +121,10 @@ async def main() -> None:
             await worker_task
         finally:
             await bot.session.close()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Bot stopped.")
