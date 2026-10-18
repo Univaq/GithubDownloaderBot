@@ -329,18 +329,12 @@ async def choose_readme_format(callback: CallbackQuery):
             caption=f"README for {full_name}",
         )
 
-        builder = InlineKeyboardBuilder()
-        repository_id = store_repository(full_name)
-
-        builder.button(
-            text="⬅️ Back to Repository",
-            callback_data=f"back:repo:{repository_id}",
-        )
-        builder.adjust(1)
-
         await message.edit_text(
-            "README downloaded successfully.",
-            reply_markup=builder.as_markup(),
+            "✅ README downloaded successfully. What would you like to do next?",
+            reply_markup=download_completion_keyboard(
+                full_name,
+                readme=True,
+            ),
         )
 
     except GitHubNotFoundError:
