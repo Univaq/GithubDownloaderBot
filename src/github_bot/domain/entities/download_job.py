@@ -24,6 +24,8 @@ class DownloadJob:
     status: JobStatus = JobStatus.QUEUED
     created_at: datetime | None = None
     error: str | None = None
+    queue_message_id: int | None = None
+    queue_chat_id: int | None = None
 
     def can_start(self) -> bool:
         return self.status is JobStatus.QUEUED
