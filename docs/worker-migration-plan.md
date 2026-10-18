@@ -23,8 +23,8 @@ The new `SQLiteJobRepository` implements similar operations and the `to_legacy_w
 
 1. Keep the current production worker unchanged while tests cover row mapping and the compatibility payload.
 2. Add worker-loop tests with stubbed persistence functions and a fake bot. Cover successful claim/completion, processing failure/failure status, failed status update, and graceful stop while idle.
-3. Introduce one explicit worker persistence dependency (a small protocol or callbacks) so the worker's orchestration can be tested independently of SQLite.
-4. In a separate change, switch the dependency to the new repository and keep the legacy payload mapper at the boundary. Ensure completion/failure use the same repository instance that claimed the job.
+3. The worker loop now accepts an optional `WorkerJobGateway` protocol dependency. The default remains the legacy persistence facade; tests verify that an injected gateway owns claim and terminal transitions consistently.
+4. In a separate change, explicitly construct `LegacyWorkerJobGateway(SQLiteJobRepository(...))` and inject it into the worker. Keep the legacy payload mapper at the boundary and ensure completion/failure use the same repository instance that claimed the job.
 5. Run the full CI suite and a controlled staging/manual smoke test before deployment. Keep the old facade available until rollback is no longer needed.
 
 ## Rollback
@@ -33,4 +33,4 @@ If the new worker path fails verification, revert the worker wiring only and ret
 
 ## Current readiness
 
-The architecture PR is still a draft. The adapter and mapper are test-covered, but production worker wiring and live deployment have not been performed.
+The architecture PR is still a draft. The adapter, mapper, SQLite lifecycle, and injected worker-gateway seam are test-covered. The production worker still defaults to legacy persistence; explicit new-repository wiring and live deployment have not been performed.
