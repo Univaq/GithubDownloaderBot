@@ -1,4 +1,7 @@
 from types import SimpleNamespace
+import os
+
+os.environ.setdefault("BOT_TOKEN", "123456:TEST_TOKEN")
 
 import pytest
 
