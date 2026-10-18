@@ -43,7 +43,12 @@ async def test_repository_maps_existing_jobs_schema_and_transitions(tmp_path):
     assert claimed is not None
     assert claimed.status is JobStatus.RUNNING
     assert await repository.count_queued() == 0
-    assert await repository.set_status(1, JobStatus.COMPLETED)
+    assert await repository.set_status(
+        1, JobStatus.COMPLETED, expected_status=JobStatus.RUNNING
+    )
+    assert not await repository.set_status(
+        1, JobStatus.FAILED, expected_status=JobStatus.RUNNING
+    )
     finished = await repository.get_by_id(1)
     assert finished is not None
     assert finished.status is JobStatus.COMPLETED
