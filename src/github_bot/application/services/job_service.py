@@ -33,6 +33,11 @@ class JobService:
         }
         if status not in allowed[job.status]:
             raise InvalidJobStateError(f"Cannot change job from {job.status} to {status}")
-        updated = await self._repository.set_status(job_id, status, error=error)
+        updated = await self._repository.set_status(
+            job_id,
+            status,
+            expected_status=job.status,
+            error=error,
+        )
         if not updated:
             raise InvalidJobStateError("Job status changed concurrently; reload and retry")
