@@ -33,4 +33,4 @@ If the new worker path fails verification, revert the worker wiring only and ret
 
 ## Current readiness
 
-The architecture PR is still a draft. The adapter, mapper, SQLite lifecycle, and injected worker-gateway seam are test-covered. The production worker still defaults to legacy persistence; explicit new-repository wiring and live deployment have not been performed.
+The architecture PR is still a draft. The adapter, mapper, SQLite lifecycle, and injected worker-gateway seam are test-covered. The production worker now supports an explicit `USE_SQLITE_WORKER_GATEWAY=true` opt-in. The default remains legacy persistence (`false`), and no live deployment or VPS change has been performed. Automated test workflow triggers are currently disabled by design; re-enable CI and verify the full suite before setting the flag in production.
