@@ -119,8 +119,17 @@ async def back_to_main_menu(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
+    # A callback can expire if Telegram delivers it late or it was already answered.
+    # Do not let an expired acknowledgement prevent navigation to the main menu.
+    try:
+        await callback.answer()
+    except TelegramBadRequest as exc:
+        message = str(exc).lower()
+        if "query is too old" not in message and "query id is invalid" not in message:
+            raise
+        logger.debug("Ignoring expired callback query while returning to main menu: %s", exc)
+
     await state.clear()
-    await callback.answer()
 
     await edit_or_send(
         callback,
