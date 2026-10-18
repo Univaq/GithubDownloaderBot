@@ -170,6 +170,11 @@ def repository_keyboard(
         next_callback=f"search_page:{search_token}:{page + 1}",
     )
 
+    builder.button(
+        text="🔎 Search Again",
+        callback_data=_validate_callback_data("search:again"),
+    )
+
     add_back_button(
         builder,
         "menu:main",
