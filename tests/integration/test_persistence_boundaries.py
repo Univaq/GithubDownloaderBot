@@ -106,10 +106,6 @@ async def test_search_history_keeps_only_latest_twenty_per_user(isolated_databas
     assert len(history) == 20
     assert history[0]["query"] == "query-24"
     assert history[-1]["query"] == "query-5"
-    assert await search_history.get_search_history(2) == [
-        {
-            "id": (await search_history.get_search_history(2))[0]["id"],
-            "query": "private-query",
-            "created_at": (await search_history.get_search_history(2))[0]["created_at"],
-        }
-    ]
+    other_user_history = await search_history.get_search_history(2)
+    assert len(other_user_history) == 1
+    assert other_user_history[0]["query"] == "private-query"
