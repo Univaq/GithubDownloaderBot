@@ -175,3 +175,83 @@ async def test_worker_loop_does_not_retry_when_saving_completion_raises(monkeypa
     fail_mock.assert_not_awaited()
     bot.send_message.assert_not_awaited()
     worker.claim_next_job.assert_awaited_once_with()
+
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_uses_injected_gateway_for_claim_and_completion(monkeypatch):
+    job = {"id": 17, "chat_id": 39, "repo_url": "https://example.test/repo.zip"}
+    stop_event = asyncio.Event()
+    bot = AsyncMock()
+
+    class Gateway:
+        def __init__(self):
+            self.claim_calls = 0
+            self.completed = []
+
+        async def claim_next_payload(self):
+            self.claim_calls += 1
+            return job
+
+        async def mark_completed(self, job_id):
+            self.completed.append(job_id)
+            stop_event.set()
+            return True
+
+        async def mark_failed(self, job_id, error):
+            raise AssertionError("failure transition must not be used")
+
+    gateway = Gateway()
+    process_mock = AsyncMock()
+    monkeypatch.setattr(worker, "process_download_job", process_mock)
+    legacy_claim = AsyncMock(side_effect=AssertionError("legacy claim used"))
+    legacy_finish = AsyncMock(side_effect=AssertionError("legacy finish used"))
+    monkeypatch.setattr(worker, "claim_next_job", legacy_claim)
+    monkeypatch.setattr(worker, "finish_job", legacy_finish)
+
+    await worker.worker_loop(bot, stop_event, job_gateway=gateway)
+
+    process_mock.assert_awaited_once_with(bot, job)
+    assert gateway.claim_calls == 1
+    assert gateway.completed == [17]
+    legacy_claim.assert_not_awaited()
+    legacy_finish.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_uses_injected_gateway_for_failure(monkeypatch):
+    job = {"id": 18, "chat_id": 40, "repo_url": "https://example.test/broken.zip"}
+    stop_event = asyncio.Event()
+    bot = AsyncMock()
+
+    class Gateway:
+        async def claim_next_payload(self):
+            return job
+
+        async def mark_completed(self, job_id):
+            raise AssertionError("completion transition must not be used")
+
+        async def mark_failed(self, job_id, error):
+            assert job_id == 18
+            assert error == "gateway path failed"
+            stop_event.set()
+            return True
+
+    monkeypatch.setattr(
+        worker,
+        "process_download_job",
+        AsyncMock(side_effect=RuntimeError("gateway path failed")),
+    )
+    legacy_claim = AsyncMock(side_effect=AssertionError("legacy claim used"))
+    legacy_fail = AsyncMock(side_effect=AssertionError("legacy failure used"))
+    monkeypatch.setattr(worker, "claim_next_job", legacy_claim)
+    monkeypatch.setattr(worker, "fail_job", legacy_fail)
+
+    await worker.worker_loop(bot, stop_event, job_gateway=Gateway())
+
+    legacy_claim.assert_not_awaited()
+    legacy_fail.assert_not_awaited()
+    bot.send_message.assert_awaited_once_with(
+        chat_id=40,
+        text="Download or upload failed. Please try again later.",
+    )
