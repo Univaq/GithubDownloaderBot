@@ -53,6 +53,7 @@ class Settings:
     max_concurrent_jobs: int
     max_queue_size: int
     max_download_bytes: int
+    use_sqlite_worker_gateway: bool
 
     @classmethod
     def load(cls) -> "Settings":
@@ -116,6 +117,10 @@ class Settings:
                 default=100,
             ),
             max_download_bytes=max_download_mb * 1024 * 1024,
+            use_sqlite_worker_gateway=env_bool(
+                "USE_SQLITE_WORKER_GATEWAY",
+                False,
+            ),
         )
 
 
