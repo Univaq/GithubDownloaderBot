@@ -146,3 +146,32 @@ async def test_worker_loop_does_not_retry_job_when_completion_status_is_not_save
     finish_mock.assert_awaited_once_with(15)
     fail_mock.assert_not_awaited()
     bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_worker_loop_does_not_retry_when_saving_completion_raises(monkeypatch):
+    job = {"id": 16, "chat_id": 38, "repo_url": "https://example.test/repo.zip"}
+    stop_event = asyncio.Event()
+    bot = AsyncMock()
+
+    monkeypatch.setattr(worker, "claim_next_job", AsyncMock(return_value=job))
+    process_mock = AsyncMock()
+    monkeypatch.setattr(worker, "process_download_job", process_mock)
+
+    async def fail_to_save_completion(job_id):
+        assert job_id == 16
+        stop_event.set()
+        raise RuntimeError("database unavailable")
+
+    finish_mock = AsyncMock(side_effect=fail_to_save_completion)
+    monkeypatch.setattr(worker, "finish_job", finish_mock)
+    fail_mock = AsyncMock()
+    monkeypatch.setattr(worker, "fail_job", fail_mock)
+
+    await worker.worker_loop(bot, stop_event)
+
+    process_mock.assert_awaited_once_with(bot, job)
+    finish_mock.assert_awaited_once_with(16)
+    fail_mock.assert_not_awaited()
+    bot.send_message.assert_not_awaited()
+    worker.claim_next_job.assert_awaited_once_with()
