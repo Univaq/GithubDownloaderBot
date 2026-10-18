@@ -61,3 +61,23 @@ async def test_invalid_terminal_transition_is_rejected():
     service = JobService(FakeJobRepository(make_job(JobStatus.COMPLETED)), max_queue_size=3)
     with pytest.raises(InvalidJobStateError):
         await service.transition(1, JobStatus.CANCELLED)
+
+class RacingJobRepository(FakeJobRepository):
+    async def get_by_id(self, job_id):
+        snapshot = await super().get_by_id(job_id)
+        if snapshot is not None:
+            self.job = make_job(JobStatus.RUNNING)
+        return snapshot
+
+
+@pytest.mark.asyncio
+async def test_concurrent_state_change_is_not_overwritten():
+    repository = RacingJobRepository(make_job(JobStatus.QUEUED))
+    service = JobService(repository, max_queue_size=3)
+
+    with pytest.raises(InvalidJobStateError, match="concurrently"):
+        await service.transition(1, JobStatus.RUNNING)
+
+    assert repository.job.status is JobStatus.RUNNING
+    assert repository.updated is None
+
