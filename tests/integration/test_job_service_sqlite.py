@@ -60,10 +60,18 @@ async def test_job_service_detects_stale_state_before_transition(tmp_path):
     repository = SQLiteJobRepository(database_path)
     service = JobService(repository, max_queue_size=2)
 
-    # Simulate another worker claiming the job after the service read its state.
+    # Return a queued snapshot while the database has already moved to running.
+    stale_job = await repository.get_by_id(1)
+    assert stale_job is not None
     assert await repository.set_status(
         1, JobStatus.RUNNING, expected_status=JobStatus.QUEUED
     )
+
+    async def return_stale_snapshot(job_id):
+        assert job_id == 1
+        return stale_job
+
+    repository.get_by_id = return_stale_snapshot
     with pytest.raises(InvalidJobStateError, match="changed concurrently"):
         await service.transition(1, JobStatus.RUNNING)
 
