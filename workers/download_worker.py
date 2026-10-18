@@ -283,7 +283,11 @@ async def worker_loop(
 ) -> None:
     while not stop_event.is_set():
         try:
-            job = await claim_next_job()
+            job = (
+                await job_gateway.claim_next_payload()
+                if job_gateway is not None
+                else await claim_next_job()
+            )
         except Exception:
             logger.exception(
                 "Could not claim the next download job"
@@ -351,7 +355,11 @@ async def worker_loop(
 
         else:
             try:
-                marked_completed = await finish_job(job["id"])
+                marked_completed = (
+                    await job_gateway.mark_completed(job["id"])
+                    if job_gateway is not None
+                    else await finish_job(job["id"])
+                )
 
                 if not marked_completed:
                     logger.error(
