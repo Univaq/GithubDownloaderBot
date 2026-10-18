@@ -293,12 +293,14 @@ async def perform_repository_search(
                 )
                 return
 
-            # Keep the search to at most two pages of ten repositories.
+            # Fetch at most two API pages, with ten repositories per page.
+            # GitHub's default best-match ranking is more useful for names
+            # such as "Pattng" than sorting every query by star count.
             repositories = await github.search_repositories(
                 query,
-                per_page=20,
+                per_page=10,
+                max_results=20,
             )
-            repositories = repositories[:20]
 
         if not repositories:
             await status_message.edit_text("No repositories were found.")
