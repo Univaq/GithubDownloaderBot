@@ -3,6 +3,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from typing import Protocol
 from pathlib import Path
 
 import aiofiles
@@ -17,6 +18,16 @@ from services.downloader import download_to_temp, delete_temp_file
 logger = logging.getLogger(__name__)
 
 UploadProgress = Callable[[int], Awaitable[None]]
+
+
+class WorkerJobGateway(Protocol):
+    """Persistence operations required by worker orchestration."""
+
+    async def claim_next_payload(self) -> dict[str, object] | None: ...
+
+    async def mark_completed(self, job_id: int) -> bool: ...
+
+    async def mark_failed(self, job_id: int, error: str) -> bool: ...
 
 
 class ProgressInputFile(InputFile):
@@ -280,7 +291,10 @@ async def process_download_job(bot: Bot, job: dict) -> None:
 async def worker_loop(
     bot: Bot,
     stop_event: asyncio.Event,
+    *,
+    job_gateway: WorkerJobGateway | None = None,
 ) -> None:
+    """Run the worker with legacy persistence by default."""
     while not stop_event.is_set():
         try:
             job = (
@@ -324,9 +338,10 @@ async def worker_loop(
             )
 
             try:
-                marked_failed = await fail_job(
-                    job["id"],
-                    str(exc),
+                marked_failed = (
+                    await job_gateway.mark_failed(job["id"], str(exc))
+                    if job_gateway is not None
+                    else await fail_job(job["id"], str(exc))
                 )
 
                 if not marked_failed:
