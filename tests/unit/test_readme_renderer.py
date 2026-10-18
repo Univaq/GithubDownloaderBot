@@ -30,7 +30,7 @@ def test_inline_markdown_escapes_html_and_rejects_non_http_links():
 
 
 def test_readme_preview_splits_large_code_blocks_under_telegram_limit():
-    source = "```text\n" + ("x" * 4000) + "\n```"
+    source = "```text\n" + ("x" * 100 + "\n") * 40 + "```"
 
     messages = split_readme_preview(source)
 
