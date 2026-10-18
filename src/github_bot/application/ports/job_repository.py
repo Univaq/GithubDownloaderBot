@@ -15,6 +15,7 @@ class JobRepository(Protocol):
         job_id: int,
         status: JobStatus,
         *,
+        expected_status: JobStatus,
         error: str | None = None,
     ) -> bool: ...
 
