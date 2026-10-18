@@ -21,6 +21,7 @@ from services.callback_cache import (
     get_search_results,
     store_search_results,
 )
+from services.repository_presenter import format_repository_card
 from services.github import (
     GitHubError,
     GitHubNotFoundError,
@@ -294,13 +295,13 @@ async def perform_repository_search(
                 )
 
                 await status_message.edit_text(
-                    f"📦 <b>{repository['full_name']}</b>\n\n"
-                    "Choose what you want to download:",
+                    format_repository_card(repository["full_name"], repository),
                     reply_markup=repository_action_keyboard(
                         repository["full_name"],
                         is_favorite=favorite_status,
                     ),
                     parse_mode="HTML",
+                    disable_web_page_preview=True,
                 )
                 return
 
