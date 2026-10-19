@@ -365,6 +365,14 @@ def download_completion_keyboard(
 
     if full_name and full_name.count("/") == 1:
         repository_id = store_repository(full_name)
+        # Keep the repository name in callback data when it fits, so this
+        # button also works when the download worker and bot use separate
+        # processes with independent in-memory callback caches.
+        repository_ref = (
+            full_name
+            if len(f"back:repo:{full_name}".encode("utf-8")) <= CALLBACK_MAX_BYTES
+            else repository_id
+        )
         if not readme:
             builder.button(
                 text="📥 Download another file",
@@ -375,7 +383,7 @@ def download_completion_keyboard(
         builder.button(
             text="📁 Back to Repository",
             callback_data=_validate_callback_data(
-                f"back:repo:{repository_id}"
+                f"back:repo:{repository_ref}"
             ),
         )
     else:
