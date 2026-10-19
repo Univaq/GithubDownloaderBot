@@ -77,7 +77,7 @@ async def choose_readme(callback: CallbackQuery):
         builder.adjust(1)
 
         await message.edit_text(
-            f"📄 Choose a README file\n"
+            f"📄 <b>Choose a README file</b>\n"
             f"Repository: {html.escape(full_name)}\n\n"
             f"Found {len(files)} README files.",
             reply_markup=readme_files_keyboard(
@@ -154,7 +154,7 @@ async def change_readme_page(callback: CallbackQuery):
             return
 
         await callback.message.edit_text(
-            f"📄 Choose a README file\n"
+            f"📄 <b>Choose a README file</b>\n"
             f"Repository: {html.escape(full_name)}\n\n"
             f"Found {len(files)} README files.",
             reply_markup=readme_files_keyboard(
