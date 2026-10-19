@@ -1,4 +1,5 @@
 
+import html
 import logging
 
 from aiogram import F, Router
@@ -15,6 +16,8 @@ from repositories.jobs import (
     remove_favorite,
 )
 from services.callback_cache import get_repository, store_repository
+from services.github import GitHubError, GitHubRateLimitError, GitHubService
+from services.repository_presenter import format_repository_card
 
 
 router = Router(name="favorites")
@@ -249,10 +252,32 @@ async def open_favorite_handler(
     favorite_status = await is_favorite(callback.from_user.id, full_name)
     await state.set_state("viewing_favorites")
 
-    text = (
-        f"📦 <b>{full_name}</b>\n\n"
-        "What would you like to explore or download?"
-    )
+    owner, repo = full_name.split("/", 1)
+    try:
+        async with GitHubService() as github:
+            repository = await github.get_repository(owner, repo)
+        text = format_repository_card(full_name, repository)
+    except GitHubRateLimitError:
+        text = (
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
+            "⚠️ GitHub’s request limit has been reached. "
+            "Repository details are temporarily unavailable. Please try again shortly.\n\n"
+            "<b>Choose an action below</b>"
+        )
+    except GitHubError:
+        logger.exception("Failed to retrieve favorite repository details: %s", full_name)
+        text = (
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
+            "⚠️ We couldn’t load the repository details. Please try again.\n\n"
+            "<b>Choose an action below</b>"
+        )
+    except Exception:
+        logger.exception("Unexpected error loading favorite repository details: %s", full_name)
+        text = (
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
+            "⚠️ Something went wrong while loading the repository details.\n\n"
+            "<b>Choose an action below</b>"
+        )
 
     try:
         await callback.message.edit_text(
@@ -262,6 +287,7 @@ async def open_favorite_handler(
                 is_favorite=favorite_status,
             ),
             parse_mode="HTML",
+            disable_web_page_preview=True,
         )
     except TelegramBadRequest as exc:
         logger.warning(
