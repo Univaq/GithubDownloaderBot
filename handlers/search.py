@@ -141,7 +141,20 @@ async def update_search_message(
             parse_mode=parse_mode,
         )
     except TelegramBadRequest as exc:
-        logger.warning("Could not edit search message: %s", exc)
+        error_text = str(exc).lower()
+        if "message is not modified" in error_text:
+            return message
+
+        logger.warning("Could not edit search message; sending a replacement: %s", exc)
+        try:
+            return await message.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        except Exception:
+            logger.exception("Could not send replacement search message")
+            return None
 
     return message
 
