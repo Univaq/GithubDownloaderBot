@@ -127,13 +127,13 @@ async def process_download_job(bot: Bot, job: dict) -> None:
         progress_message = await bot.send_message(
             chat_id=job["chat_id"],
             text=(
-                "DOWNLOAD MANAGER\n"
+                "📥 DOWNLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
-                "Status: Connecting to GitHub...\n"
+                "Status: Connecting to GitHub…\n"
                 f"{make_progress_bar(0)} 0.0%\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Downloaded: 0.00 MB\n"
-                "Speed: Calculating...\n"
+                "Speed: Calculating…\n"
                 "Source: GitHub"
             ),
         )
@@ -185,10 +185,10 @@ async def process_download_job(bot: Bot, job: dict) -> None:
                 )
             else:
                 size_text = f"Downloaded: {downloaded_mb:.2f} MB"
-                progress_text = "Progress: Receiving data..."
+                progress_text = "Progress: Receiving data…"
 
             text = (
-                "DOWNLOAD MANAGER\n"
+                "📥 DOWNLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Status: Downloading from GitHub\n"
                 f"{progress_text}\n"
@@ -228,13 +228,13 @@ async def process_download_job(bot: Bot, job: dict) -> None:
         upload_speed = 0.0
 
         await progress_message.edit_text(
-            "UPLOAD MANAGER\n"
+            "📤 UPLOAD\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "Status: Preparing file for Telegram\n"
+            "Status: Preparing your file for Telegram\n"
             f"{make_progress_bar(0)} 0.0%\n"
             "━━━━━━━━━━━━━━━━━━\n"
             f"File size: {size / (1024 * 1024):.2f} MB\n"
-            "Speed: Calculating...\n"
+            "Speed: Calculating…\n"
             "Destination: Telegram"
         )
 
@@ -263,7 +263,7 @@ async def process_download_job(bot: Bot, job: dict) -> None:
             speed_mb = upload_speed / (1024 * 1024)
 
             text = (
-                "UPLOAD MANAGER\n"
+                "📤 UPLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Status: Uploading to Telegram\n"
                 f"{make_progress_bar(percent)} {percent:.1f}%\n"
@@ -289,14 +289,14 @@ async def process_download_job(bot: Bot, job: dict) -> None:
                 filename=job.get("file_name") or path.name,
                 progress_callback=on_upload_progress,
             ),
-            caption="Download from GitHub completed successfully.",
+            caption="Your GitHub file is ready to go!",
         )
 
         full_name = repository_from_download_url(str(job.get("repo_url") or ""))
         try:
             await bot.send_message(
                 chat_id=job["chat_id"],
-                text="✅ File sent successfully. What would you like to do next?",
+                text="✅ Your file is ready! What would you like to do next?",
                 reply_markup=download_completion_keyboard(full_name),
             )
         except Exception:
@@ -410,8 +410,8 @@ async def worker_loop(
                 await bot.send_message(
                     chat_id=job["chat_id"],
                     text=(
-                        "Download or upload failed. "
-                        "Please try again later."
+                        "We couldn’t complete your download. "
+                        "Please try again in a moment."
                     ),
                 )
             except Exception:
