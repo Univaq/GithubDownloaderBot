@@ -83,7 +83,7 @@ def readme_preview_keyboard(
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="⬇️ Download README",
+        text="📄 Download README",
         callback_data=f"readme_fmt:md:{readme_id}:0",
     )
     builder.button(
@@ -114,7 +114,7 @@ async def send_source_selection(
     except GitHubNotFoundError:
         await show_github_error(
             callback,
-            "❌ Repository or requested version not found.",
+            "We couldn’t find this repository or version.",
             full_name,
         )
         return
@@ -131,7 +131,7 @@ async def send_source_selection(
         logger.exception("Failed to retrieve repository source")
         await show_github_error(
             callback,
-            "❌ Failed to retrieve repository source code.",
+            "We couldn’t load the source code. Please try again.",
             full_name,
         )
         return
@@ -140,7 +140,7 @@ async def send_source_selection(
         logger.exception("Unexpected error while retrieving source")
         await show_github_error(
             callback,
-            "❌ Something unexpected happened. Please try again. Please try again in a moment.",
+            "Something unexpected happened. Please try again in a moment.",
             full_name,
         )
         return
@@ -157,7 +157,7 @@ async def send_source_selection(
 
     builder = InlineKeyboardBuilder()
     builder.button(
-        text="⬇️ Download Source Code",
+        text="📦 Download Source Code",
         callback_data=f"get:{selection_id}",
     )
     builder.button(
@@ -180,7 +180,7 @@ def source_selection_keyboard(selection_id: str, repository_id: str):
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="⬇️ Download Source Code",
+        text="📦 Download Source Code",
         callback_data=f"get:{selection_id}",
     )
     builder.button(
@@ -436,7 +436,7 @@ async def back_to_repository(callback: CallbackQuery):
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
-            "This selection has expired. Please search again 🔎",
+            "This selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
