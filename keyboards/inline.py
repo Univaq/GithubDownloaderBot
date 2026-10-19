@@ -171,14 +171,14 @@ def repository_keyboard(
     )
 
     builder.button(
-        text="🔎 Search Again",
+        text="🔎 Search GitHub Again",
         callback_data=_validate_callback_data("search:again"),
     )
 
     add_back_button(
         builder,
         "menu:main",
-        "⬅️ Back to Menu",
+        "🏠 Main Menu",
     )
 
     builder.adjust(1)
@@ -196,20 +196,20 @@ def repository_action_keyboard(
 
     favorite_action = "remove" if is_favorite else "add"
     favorite_text = (
-        "❌ Remove from Favorites"
+        "⭐ Remove from Favorites"
         if is_favorite
-        else "⭐ Add to Favorites"
+        else "⭐ Save to Favorites"
     )
 
     builder.button(
-        text="📥 Download Source Code",
+        text="📦 Download Source Code",
         callback_data=_validate_callback_data(
             f"choice:src:{repository_id}"
         ),
     )
 
     builder.button(
-        text="🚀 Browse Releases",
+        text="🚀 Explore Releases",
         callback_data=_validate_callback_data(
             f"choice:rel:{repository_id}"
         ),
@@ -233,13 +233,13 @@ def repository_action_keyboard(
         add_back_button(
             builder,
             f"back:search:{search_token}",
-            "⬅️ Back to Search Results",
+            "🔎 Back to Results",
         )
     else:
         add_back_button(
             builder,
             "menu:main",
-            "⬅️ Back to Menu",
+            "🏠 Main Menu",
         )
 
     builder.adjust(1)
@@ -296,7 +296,7 @@ def releases_keyboard(
     add_back_button(
         builder,
         f"back:repo:{repository_id}",
-        "⬅️ Back to Repository",
+        "📦 Back to Repository",
     )
 
     builder.adjust(1)
@@ -336,7 +336,7 @@ def readme_download_keyboard(
     add_back_button(
         builder,
         f"back:repo:{repository_id}",
-        "⬅️ Back to Repository",
+        "📦 Back to Repository",
     )
 
     builder.adjust(1)
@@ -349,7 +349,7 @@ def search_keyboard() -> InlineKeyboardMarkup:
     add_back_button(
         builder,
         "menu:main",
-        "⬅️ Back to Menu",
+        "🏠 Main Menu",
     )
 
     builder.adjust(1)
@@ -375,20 +375,20 @@ def download_completion_keyboard(
         )
         if not readme:
             builder.button(
-                text="📥 Download another file",
+                text="📥 Download Another File",
                 callback_data=_validate_callback_data(
                     f"download:another:{repository_id}"
                 ),
             )
         builder.button(
-            text="📁 Back to Repository",
+            text="📦 Back to Repository",
             callback_data=_validate_callback_data(
                 f"back:repo:{repository_ref}"
             ),
         )
     else:
         builder.button(
-            text="🔎 Search Again",
+            text="🔎 Search GitHub Again",
             callback_data=_validate_callback_data("search:again"),
         )
 
