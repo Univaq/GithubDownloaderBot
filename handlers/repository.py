@@ -86,31 +86,3 @@ async def select_repository(callback: CallbackQuery):
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
-
-@router.callback_query(F.data.startswith("download:another:"))
-async def download_another_file(callback: CallbackQuery):
-    if not callback.data or callback.message is None:
-        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
-        return
-
-    token = callback.data.removeprefix("download:another:")
-    full_name = get_repository(token)
-
-    if not full_name or full_name.count("/") != 1:
-        await callback.answer(
-            "This repository selection has expired. Please search again 🔎",
-            show_alert=True,
-        )
-        return
-
-    await callback.answer()
-    await callback.message.edit_text(
-        f"📦 <b>{html.escape(full_name)}</b>\n\n"
-        "Choose another file or action:",
-        reply_markup=repository_action_keyboard(
-            full_name,
-            is_favorite=await is_favorite(callback.from_user.id, full_name),
-        ),
-        parse_mode="HTML",
-    )
-
