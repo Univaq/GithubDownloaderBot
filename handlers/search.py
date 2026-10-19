@@ -92,10 +92,13 @@ def extract_github_repository(text: str) -> tuple[str, str] | None:
 
     parts = parsed.path.strip("/").split("/")
 
-    if len(parts) != 2:
+    # GitHub repository links may point to a branch, directory, file, or tab,
+    # e.g. /owner/repo/tree/feature/my-branch. The repository identity is
+    # always the first two path segments; the rest is repository navigation.
+    if len(parts) < 2:
         return None
 
-    owner, repo = parts
+    owner, repo = parts[:2]
 
     if repo.endswith(".git"):
         repo = repo[:-4]
