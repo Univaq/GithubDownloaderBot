@@ -15,7 +15,7 @@ from handlers.releases import (
 )
 from keyboards.inline import releases_keyboard
 from repositories.jobs import create_selection, enqueue_selection, is_favorite
-from services.callback_cache import get_release, get_repository
+from services.callback_cache import get_release, get_repository, store_release
 from services.github import (
     GitHubError,
     GitHubNotFoundError,
@@ -203,6 +203,85 @@ async def release_selected(callback: CallbackQuery):
             "Something unexpected happened. Please try again in a moment.",
             full_name,
         )
+
+@router.callback_query(F.data.startswith("download:another:"))
+async def download_another_release_file(callback: CallbackQuery):
+    if not callback.data or callback.message is None:
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
+        return
+
+    try:
+        _, _, full_name, tag = callback.data.split(":", 3)
+    except ValueError:
+        await callback.answer("That release selection isn’t valid.", show_alert=True)
+        return
+
+    if full_name.count("/") != 1 or not tag:
+        await callback.answer("That release selection isn’t valid.", show_alert=True)
+        return
+
+    await callback.answer()
+    owner, repo = full_name.split("/", 1)
+
+    try:
+        async with GitHubService() as github:
+            releases = await github.get_releases(owner, repo)
+
+        release = next(
+            (item for item in releases if item.get("tag_name") == tag),
+            None,
+        )
+        if release is None:
+            await callback.message.edit_text(
+                "We couldn’t find that release.",
+                reply_markup=back_to_repository_keyboard(full_name),
+            )
+            return
+
+        assets = [
+            asset for asset in release.get("assets", [])
+            if isinstance(asset, dict)
+            and asset.get("name")
+            and asset.get("download_url")
+        ]
+        if not assets:
+            await callback.message.edit_text(
+                f"🚀 <b>Release:</b> <code>{html.escape(tag)}</code>\\n\\n"
+                "This release doesn’t include any downloadable files.",
+                reply_markup=back_to_repository_keyboard(full_name),
+                parse_mode="HTML",
+            )
+            return
+
+        release_token = store_release(full_name, tag)
+        await _render_release_assets(
+            callback=callback,
+            full_name=full_name,
+            tag=tag,
+            assets=assets,
+            release_token=release_token,
+            page=0,
+        )
+
+    except GitHubNotFoundError:
+        await show_github_error(callback, "We couldn’t find this repository or release.", full_name)
+    except GitHubRateLimitError:
+        await show_github_error(
+            callback,
+            "⏳ GitHub’s request limit has been reached. Please try again in a little while.",
+            full_name,
+        )
+    except GitHubError:
+        logger.exception("Failed to reload release assets")
+        await show_github_error(callback, "We couldn’t load the release files. Please try again.", full_name)
+    except Exception:
+        logger.exception("Unexpected error while reloading release assets")
+        await show_github_error(
+            callback,
+            "Something unexpected happened. Please try again in a moment.",
+            full_name,
+        )
+
 
 @router.callback_query(F.data.startswith("get:"))
 async def enqueue_download(callback: CallbackQuery):
