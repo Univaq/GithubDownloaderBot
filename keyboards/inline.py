@@ -28,7 +28,7 @@ def _validate_callback_data(callback_data: str) -> str:
 def add_back_button(
     builder: InlineKeyboardBuilder,
     callback_data: str,
-    text: str = "⬅️ Back",
+    text: str = "↩️ Back",
 ) -> None:
     builder.button(
         text=text[:MAX_BUTTON_TEXT_LENGTH],
@@ -51,7 +51,7 @@ def _add_pagination_buttons(
 
     if page > 0:
         builder.button(
-            text="⬅️ Previous",
+            text="← Previous",
             callback_data=_validate_callback_data(previous_callback),
         )
 
@@ -62,7 +62,7 @@ def _add_pagination_buttons(
 
     if page < total_pages - 1:
         builder.button(
-            text="Next ➡️",
+            text="Next →",
             callback_data=_validate_callback_data(next_callback),
         )
 
@@ -72,7 +72,7 @@ def pagination_keyboard(
     page: int,
     callback_prefix: str,
     back_callback: str,
-    back_text: str = "⬅️ Back",
+    back_text: str = "↩️ Back",
     page_size: int = ITEMS_PER_PAGE,
     item_callback=None,
     item_text=None,
@@ -327,7 +327,7 @@ def readme_download_keyboard(
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="📥 Download README (.md)",
+        text="📄 Download README (.md)",
         callback_data=_validate_callback_data(
             f"readme_fmt:md:{token}:0"
         ),
