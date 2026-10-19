@@ -99,7 +99,7 @@ async def main() -> None:
 
     try:
         await bot.set_my_commands([
-            BotCommand(command="start", description="Start the bot"),
+            BotCommand(command="start", description="Open GitHub Downloader"),
             BotCommand(command="repo", description="Search GitHub repositories"),
         ])
 
