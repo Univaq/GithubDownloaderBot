@@ -5,7 +5,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Protocol
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import aiofiles
 from aiogram import Bot
@@ -117,6 +117,24 @@ def repository_from_download_url(download_url: str) -> str | None:
         return None
 
     return f"{owner}/{repo}"
+
+
+def release_tag_from_download_url(download_url: str) -> str | None:
+    """Extract the tag from a GitHub release asset download URL."""
+    try:
+        parsed = urlparse(download_url)
+    except (TypeError, ValueError):
+        return None
+
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if (
+        (parsed.hostname or "").lower() in {"github.com", "www.github.com"}
+        and len(parts) >= 5
+        and parts[2:4] == ["releases", "download"]
+    ):
+        return unquote(parts[4])
+
+    return None
 
 
 async def process_download_job(bot: Bot, job: dict) -> None:
@@ -292,12 +310,17 @@ async def process_download_job(bot: Bot, job: dict) -> None:
             caption="Your GitHub file is ready to go!",
         )
 
-        full_name = repository_from_download_url(str(job.get("repo_url") or ""))
+        download_url = str(job.get("repo_url") or "")
+        full_name = repository_from_download_url(download_url)
+        release_tag = release_tag_from_download_url(download_url)
         try:
             await bot.send_message(
                 chat_id=job["chat_id"],
                 text="✅ Your file is ready! What would you like to do next?",
-                reply_markup=download_completion_keyboard(full_name),
+                reply_markup=download_completion_keyboard(
+                    full_name,
+                    release_tag=release_tag,
+                ),
             )
         except Exception:
             # The file is already delivered; a follow-up prompt failure must
