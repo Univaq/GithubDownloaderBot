@@ -7,7 +7,7 @@ def main_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🔎 Search",
+        text="🔎 Search GitHub",
         callback_data="menu:search",
     )
     builder.button(
@@ -15,7 +15,7 @@ def main_keyboard() -> InlineKeyboardMarkup:
         callback_data="menu:favorites",
     )
     builder.button(
-        text="🕘 Search History",
+        text="🕘 Recent Searches",
         callback_data="menu:history",
     )
 
@@ -28,7 +28,7 @@ def github_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🔎 Search",
+        text="🔎 Search GitHub",
         callback_data="menu:search",
     )
     builder.button(
@@ -36,7 +36,7 @@ def github_keyboard() -> InlineKeyboardMarkup:
         callback_data="menu:favorites",
     )
     builder.button(
-        text="🕘 Search History",
+        text="🕘 Recent Searches",
         callback_data="menu:history",
     )
     builder.button(
@@ -52,7 +52,7 @@ def search_mode_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🏠 Back to Menu",
+        text="🏠 Main Menu",
         callback_data="menu:main",
     )
 
@@ -64,7 +64,7 @@ def favorites_mode_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🏠 Back to Menu",
+        text="🏠 Main Menu",
         callback_data="menu:main",
     )
 
@@ -76,7 +76,7 @@ def history_mode_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🏠 Back to Menu",
+        text="🏠 Main Menu",
         callback_data="menu:main",
     )
 
