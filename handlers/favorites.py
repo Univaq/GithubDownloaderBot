@@ -69,7 +69,7 @@ def _favorites_keyboard(
             nav_count += 1
 
     builder.button(
-        text="🏠 Back to Menu",
+        text="🏠 Main Menu",
         callback_data="menu:main",
     )
 
@@ -94,13 +94,13 @@ async def _render_favorites(
     if favorites:
         text = (
             "⭐ <b>Your Favorites</b>\n\n"
-            "Select a repository to open its action menu.\n"
+            "Choose a repository to view its options.\n"
             f"Repositories: {len(favorites)}"
         )
         if total_pages > 1:
             text += f"\nPage {page + 1} of {total_pages}"
     else:
-        text = "⭐ <b>Your Favorites</b>\n\nYour Favorites list is empty."
+        text = "⭐ <b>Your Favorites</b>\n\nNo favorites yet. Save a repository and it’ll show up here."
 
     if edit:
         try:
@@ -123,7 +123,7 @@ async def _render_favorites(
 @router.callback_query(F.data.startswith("favorite:add:"))
 async def add_favorite_handler(callback: CallbackQuery) -> None:
     if not callback.from_user or not callback.data:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     repository_id = callback.data.removeprefix("favorite:add:")
@@ -131,7 +131,7 @@ async def add_favorite_handler(callback: CallbackQuery) -> None:
 
     if not full_name:
         await callback.answer(
-            "Repository session expired. Open the repository again.",
+            "This repository session has expired. Please open the repository again.",
             show_alert=True,
         )
         return
@@ -140,21 +140,21 @@ async def add_favorite_handler(callback: CallbackQuery) -> None:
 
     if result == "full":
         await callback.answer(
-            "Favorites is full (20 repositories). Remove one first.",
+            "Your Favorites are full (20 repositories). Remove one to make room.",
             show_alert=True,
         )
         return
 
     if result == "invalid":
-        await callback.answer("Invalid repository.", show_alert=True)
+        await callback.answer("That repository selection doesn’t look right.", show_alert=True)
         return
 
     if result == "exists":
-        await callback.answer("Already in Favorites ⭐")
+        await callback.answer("Already saved to Favorites ⭐")
     elif result == "added":
         await callback.answer("Added to Favorites ⭐")
     else:
-        await callback.answer("Could not update Favorites.", show_alert=True)
+        await callback.answer("We couldn’t update your Favorites. Please try again.", show_alert=True)
         return
 
     if callback.message:
@@ -195,7 +195,7 @@ async def favorites_page_handler(
     state: FSMContext,
 ) -> None:
     if not callback.from_user or not callback.data or not callback.message:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
@@ -203,7 +203,7 @@ async def favorites_page_handler(
         if page < 0:
             raise ValueError
     except ValueError:
-        await callback.answer("Invalid page.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     await callback.answer()
@@ -227,7 +227,7 @@ async def open_favorite_handler(
     state: FSMContext,
 ) -> None:
     if not callback.data or not callback.from_user:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     repository_id = callback.data.removeprefix("favorite:open:")
@@ -235,13 +235,13 @@ async def open_favorite_handler(
 
     if not full_name:
         await callback.answer(
-            "Repository session expired. Open Favorites again.",
+            "This Favorites session has expired. Please open Favorites again.",
             show_alert=True,
         )
         return
 
     if not callback.message:
-        await callback.answer("Message unavailable.", show_alert=True)
+        await callback.answer("This message is no longer available. Please open the menu again.", show_alert=True)
         return
 
     await callback.answer()
@@ -251,7 +251,7 @@ async def open_favorite_handler(
 
     text = (
         f"📦 <b>{full_name}</b>\n\n"
-        "Choose what you want to download:"
+        "What would you like to explore or download?"
     )
 
     try:
@@ -273,7 +273,7 @@ async def open_favorite_handler(
 @router.callback_query(F.data.startswith("favorite:remove:"))
 async def remove_favorite_handler(callback: CallbackQuery) -> None:
     if not callback.from_user or not callback.data:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     repository_id = callback.data.removeprefix("favorite:remove:")
@@ -281,7 +281,7 @@ async def remove_favorite_handler(callback: CallbackQuery) -> None:
 
     if not full_name:
         await callback.answer(
-            "Repository session expired. Open Favorites again.",
+            "This Favorites session has expired. Please open Favorites again.",
             show_alert=True,
         )
         return
@@ -289,10 +289,10 @@ async def remove_favorite_handler(callback: CallbackQuery) -> None:
     removed = await remove_favorite(callback.from_user.id, full_name)
 
     if not removed:
-        await callback.answer("Repository was not in your Favorites.")
+        await callback.answer("This repository isn’t in your Favorites.")
         return
 
-    await callback.answer("Removed from Favorites.")
+    await callback.answer("Removed from Favorites 🗑️")
 
     if callback.message:
         try:
