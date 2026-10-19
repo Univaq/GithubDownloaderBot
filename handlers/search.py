@@ -332,7 +332,7 @@ async def perform_repository_search(
                         break
 
         if not repositories:
-            await status_message.edit_text("No repositories found. Try a different name or search query.")
+            await status_message.edit_text("No repositories found. Try another name or keyword.")
             return
 
         search_token = store_search_results(repositories)
@@ -369,7 +369,7 @@ async def perform_repository_search(
         logger.exception("Unexpected repository lookup error")
         try:
             await status_message.edit_text(
-                "❌ Something unexpected happened. Please try again. Please try again in a moment."
+                "Something unexpected happened. Please try again in a moment."
             )
         except TelegramBadRequest:
             logger.exception("Could not display the search error message")
