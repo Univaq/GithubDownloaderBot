@@ -258,7 +258,7 @@ async def enqueue_download(callback: CallbackQuery):
             )
         else:
             await callback.answer(
-                "This selection is invalid or has already been used. Please select it again.",
+                "This selection is invalid or has already been used. Please select it again. Please select it again.",
                 show_alert=True,
             )
 
