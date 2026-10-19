@@ -46,7 +46,7 @@ async def select_repository(callback: CallbackQuery):
         message_text = (
             f"📦 <b>{html.escape(full_name)}</b>\n\n"
             "⚠️ GitHub’s request limit has been reached. "
-            "Repository details are temporarily unavailable. Please try again shortly. Please try again shortly.\n\n"
+            "Repository details are temporarily unavailable. Please try again shortly.\n\n"
             "<b>Choose an action below</b>"
         )
 
