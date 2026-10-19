@@ -358,6 +358,7 @@ def search_keyboard() -> InlineKeyboardMarkup:
 def download_completion_keyboard(
     full_name: str | None,
     *,
+    release_tag: str | None = None,
     readme: bool = False,
 ) -> InlineKeyboardMarkup:
     """Actions shown after a downloaded file has been sent."""
@@ -365,21 +366,20 @@ def download_completion_keyboard(
 
     if full_name and full_name.count("/") == 1:
         repository_id = store_repository(full_name)
-        # Keep the repository name in callback data when it fits, so this
-        # button also works when the download worker and bot use separate
-        # processes with independent in-memory callback caches.
         repository_ref = (
             full_name
             if len(f"back:repo:{full_name}".encode("utf-8")) <= CALLBACK_MAX_BYTES
             else repository_id
         )
-        if not readme:
-            builder.button(
-                text="📥 Download Another File",
-                callback_data=_validate_callback_data(
-                    f"download:another:{repository_id}"
-                ),
-            )
+
+        if not readme and release_tag:
+            callback_data = f"download:another:{full_name}:{release_tag}"
+            if len(callback_data.encode("utf-8")) <= CALLBACK_MAX_BYTES:
+                builder.button(
+                    text="📥 Download Another File",
+                    callback_data=callback_data,
+                )
+
         builder.button(
             text="📦 Back to Repository",
             callback_data=_validate_callback_data(
