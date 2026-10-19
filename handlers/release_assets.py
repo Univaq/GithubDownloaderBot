@@ -246,7 +246,7 @@ async def download_another_release_file(callback: CallbackQuery):
         ]
         if not assets:
             await callback.message.edit_text(
-                f"🚀 <b>Release:</b> <code>{html.escape(tag)}</code>\\n\\n"
+                f"🚀 <b>Release:</b> <code>{html.escape(tag)}</code>\n\n"
                 "This release doesn’t include any downloadable files.",
                 reply_markup=back_to_repository_keyboard(full_name),
                 parse_mode="HTML",
