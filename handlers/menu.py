@@ -34,7 +34,22 @@ async def edit_or_send(
             parse_mode=parse_mode,
         )
     except TelegramBadRequest as exc:
-        logger.warning("Could not edit menu message: %s", exc)
+        error_text = str(exc).lower()
+
+        # Telegram reports this when the requested screen is already visible.
+        # Treat it as success instead of sending a duplicate message.
+        if "message is not modified" in error_text:
+            return
+
+        logger.warning("Could not edit menu message; sending a replacement: %s", exc)
+        try:
+            await message.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        except Exception:
+            logger.exception("Could not send replacement menu message")
 
 
 async def _render_search_history(
