@@ -82,7 +82,7 @@ async def _render_search_history(
             )
 
     builder.button(
-        text="⬅️ Back to Menu",
+        text="🏠 Main Menu",
         callback_data="menu:main",
     )
 
@@ -96,14 +96,14 @@ async def _render_search_history(
     if history:
         text = (
             "🕘 <b>Search History</b>\n\n"
-            "Select a previous search:"
+            "Pick a previous search to run it again."
         )
         if total_pages > 1:
             text += f"\n\nPage {page + 1} of {total_pages}"
     else:
         text = (
             "🕘 <b>Search History</b>\n\n"
-            "Your search history is empty."
+            "No searches yet. Your recent searches will appear here."
         )
 
     await edit_or_send(
@@ -133,7 +133,7 @@ async def back_to_main_menu(
 
     await edit_or_send(
         callback,
-        "🏠 <b>GitHub Bot</b>\n\nChoose an option:",
+        "🏠 <b>GitHub Bot</b>\n\nWhat would you like to do today?",
         reply_markup=main_keyboard(),
         parse_mode="HTML",
     )
@@ -146,14 +146,14 @@ async def start_github_search(
 ) -> None:
     message = callback.message
     if message is None:
-        await callback.answer("Message unavailable.", show_alert=True)
+        await callback.answer("This message is no longer available. Please open the menu again.", show_alert=True)
         return
 
     await callback.answer()
 
     try:
         await message.edit_text(
-            "🔎 Send a repository name, search query, or GitHub URL:",
+            "🔎 Send a repository name, a search query, or a GitHub link to get started.",
             reply_markup=search_mode_keyboard(),
         )
     except TelegramBadRequest as exc:
@@ -173,12 +173,12 @@ async def open_favorites(
     state: FSMContext,
 ) -> None:
     if not callback.from_user:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     message = callback.message
     if message is None:
-        await callback.answer("Message unavailable.", show_alert=True)
+        await callback.answer("This message is no longer available. Please open the menu again.", show_alert=True)
         return
 
     await callback.answer()
@@ -199,7 +199,7 @@ async def show_search_history(
     state: FSMContext,
 ) -> None:
     if not callback.from_user:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     await callback.answer()
@@ -215,17 +215,17 @@ async def show_search_history(
 @router.callback_query(F.data.startswith("history:page:"))
 async def change_history_page(callback: CallbackQuery) -> None:
     if not callback.data or not callback.from_user:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
         page = int(callback.data.rsplit(":", 1)[1])
     except (ValueError, IndexError):
-        await callback.answer("Invalid page.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     if page < 0:
-        await callback.answer("Invalid page.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     await callback.answer()
@@ -257,7 +257,7 @@ async def repeat_search_from_history(
     state: FSMContext,
 ) -> None:
     if not callback.data or not callback.from_user:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
@@ -276,7 +276,7 @@ async def repeat_search_from_history(
 
     if entry is None:
         await callback.answer(
-            "This history entry is no longer available.",
+            "This search history entry is no longer available.",
             show_alert=True,
         )
         return
