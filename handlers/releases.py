@@ -426,7 +426,13 @@ async def back_to_repository(callback: CallbackQuery):
         return
 
     token = callback.data.removeprefix("back:repo:")
-    full_name = get_repository(token)
+    # Download-completion buttons may carry owner/repo directly so that
+    # they don't depend on a process-local callback cache.
+    full_name = (
+        token
+        if token.count("/") == 1
+        else get_repository(token)
+    )
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
