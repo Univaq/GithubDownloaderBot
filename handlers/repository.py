@@ -19,7 +19,7 @@ router = Router(name="repository")
 @router.callback_query(F.data.startswith("repo:"))
 async def select_repository(callback: CallbackQuery):
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     token = callback.data.removeprefix("repo:")
@@ -27,7 +27,7 @@ async def select_repository(callback: CallbackQuery):
 
     if full_name is None or full_name.count("/") != 1:
         await callback.answer(
-            "This selection has expired. Please search again.",
+            "This selection has expired. Please search again 🔎",
             show_alert=True,
         )
         return
@@ -46,7 +46,7 @@ async def select_repository(callback: CallbackQuery):
         message_text = (
             f"📁 <b>{html.escape(full_name)}</b>\n\n"
             "⚠️ GitHub rate limit reached. "
-            "Repository details are temporarily unavailable.\n\n"
+            "Repository details are temporarily unavailable. Please try again shortly.\n\n"
             "<b>Choose an action below</b>"
         )
 
@@ -57,7 +57,7 @@ async def select_repository(callback: CallbackQuery):
         )
         message_text = (
             f"📁 <b>{html.escape(full_name)}</b>\n\n"
-            "⚠️ Repository details could not be loaded.\n\n"
+            "⚠️ We couldn’t load the repository details. Please try again.\n\n"
             "<b>Choose an action below</b>"
         )
 
@@ -68,7 +68,7 @@ async def select_repository(callback: CallbackQuery):
         )
         message_text = (
             f"📁 <b>{html.escape(full_name)}</b>\n\n"
-            "⚠️ An unexpected error occurred while loading details.\n\n"
+            "⚠️ Something went wrong while loading the repository details.\n\n"
             "<b>Choose an action below</b>"
         )
 
@@ -90,7 +90,7 @@ async def select_repository(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("download:another:"))
 async def download_another_file(callback: CallbackQuery):
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     token = callback.data.removeprefix("download:another:")
@@ -98,7 +98,7 @@ async def download_another_file(callback: CallbackQuery):
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
-            "This repository selection has expired. Please search again.",
+            "This repository selection has expired. Please search again 🔎",
             show_alert=True,
         )
         return
@@ -106,7 +106,7 @@ async def download_another_file(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
         f"📦 <b>{html.escape(full_name)}</b>\n\n"
-        "Choose another file or download option:",
+        "Choose another file or action:",
         reply_markup=repository_action_keyboard(
             full_name,
             is_favorite=await is_favorite(callback.from_user.id, full_name),
