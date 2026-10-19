@@ -38,7 +38,7 @@ async def choose_releases(callback: CallbackQuery):
 
     if full_name is None:
         await callback.answer(
-            "This selection has expired. Please search again 🔎",
+            "This selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
@@ -102,7 +102,7 @@ async def choose_releases(callback: CallbackQuery):
         logger.exception("Unexpected error while fetching releases")
         await show_github_error(
             callback,
-            "❌ Something unexpected happened. Please try again. Please try again in a moment.",
+            "Something unexpected happened. Please try again in a moment.",
             full_name,
         )
 
@@ -117,7 +117,7 @@ async def release_selected(callback: CallbackQuery):
 
     if release_info is None:
         await callback.answer(
-            "This release selection has expired. Please search again 🔎",
+            "This release selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
@@ -200,7 +200,7 @@ async def release_selected(callback: CallbackQuery):
         logger.exception("Unexpected error while retrieving release assets")
         await show_github_error(
             callback,
-            "❌ Something unexpected happened. Please try again. Please try again in a moment.",
+            "Something unexpected happened. Please try again in a moment.",
             full_name,
         )
 
@@ -292,7 +292,7 @@ async def back_to_releases(callback: CallbackQuery):
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
-            "This selection has expired. Please search again 🔎",
+            "This selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
@@ -366,7 +366,7 @@ async def change_releases_page(callback: CallbackQuery):
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
-            "This selection has expired. Please search again 🔎",
+            "This selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
@@ -432,7 +432,7 @@ async def change_releases_page(callback: CallbackQuery):
         )
         await show_github_error(
             callback,
-            "❌ Something unexpected happened. Please try again. Please try again in a moment.",
+            "Something unexpected happened. Please try again in a moment.",
             full_name,
         )
 
@@ -455,7 +455,7 @@ async def releases_page_info(callback: CallbackQuery):
 
     if get_repository(token) is None:
         await callback.answer(
-            "This selection has expired. Please search again 🔎",
+            "This selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
@@ -482,7 +482,7 @@ async def change_assets_page(callback: CallbackQuery):
 
     if release_info is None:
         await callback.answer(
-            "This release selection has expired. Please search again 🔎",
+            "This release selection has expired. Please start a new search 🔎",
             show_alert=True,
         )
         return
