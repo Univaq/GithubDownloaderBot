@@ -327,7 +327,7 @@ async def choose_readme_format(callback: CallbackQuery):
 
         await message.answer_document(
             document=document,
-            caption=f"README for {full_name}",
+            caption=f"📄 README · {full_name}",
         )
         # Remove the temporary status message only after the document was
         # sent successfully, then place the completion prompt at the end.
