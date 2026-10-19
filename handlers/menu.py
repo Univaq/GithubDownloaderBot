@@ -95,14 +95,14 @@ async def _render_search_history(
 
     if history:
         text = (
-            "🕘 <b>Search History</b>\n\n"
+            "🕘 <b>Recent Searches</b>\n\n"
             "Pick a previous search to run it again."
         )
         if total_pages > 1:
             text += f"\n\nPage {page + 1} of {total_pages}"
     else:
         text = (
-            "🕘 <b>Search History</b>\n\n"
+            "🕘 <b>Recent Searches</b>\n\n"
             "No searches yet. Your recent searches will appear here."
         )
 
