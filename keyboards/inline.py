@@ -196,7 +196,7 @@ def repository_action_keyboard(
 
     favorite_action = "remove" if is_favorite else "add"
     favorite_text = (
-        "⭐ Remove from Favorites"
+        "❌ Remove from Favorites"
         if is_favorite
         else "⭐ Save to Favorites"
     )
