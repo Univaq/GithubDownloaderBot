@@ -47,7 +47,7 @@ def back_to_repository_keyboard(full_name: str):
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="⬅️ Back to Repository",
+        text="📦 Back to Repository",
         callback_data=f"back:repo:{repository_id}",
     )
 
@@ -87,7 +87,7 @@ def readme_preview_keyboard(
         callback_data=f"readme_fmt:md:{readme_id}:0",
     )
     builder.button(
-        text="⬅️ Back to Repository",
+        text="📦 Back to Repository",
         callback_data=f"back:repo:{repository_id}",
     )
     builder.adjust(1)
@@ -122,7 +122,7 @@ async def send_source_selection(
     except GitHubRateLimitError:
         await show_github_error(
             callback,
-            "⏳ GitHub rate limit reached. Please try again later.",
+            "⏳ GitHub’s request limit has been reached. Please try again in a little while.",
             full_name,
         )
         return
@@ -140,7 +140,7 @@ async def send_source_selection(
         logger.exception("Unexpected error while retrieving source")
         await show_github_error(
             callback,
-            "❌ An unexpected error occurred. Please try again later.",
+            "❌ Something unexpected happened. Please try again. Please try again in a moment.",
             full_name,
         )
         return
@@ -161,7 +161,7 @@ async def send_source_selection(
         callback_data=f"get:{selection_id}",
     )
     builder.button(
-        text="⬅️ Back to Repository",
+        text="📦 Back to Repository",
         callback_data=f"back:repo:{repository_id}",
     )
     builder.adjust(1)
@@ -170,7 +170,7 @@ async def send_source_selection(
         f"📦 <b>Source Code</b>\n"
         f"Repository: <code>{full_name}</code>\n"
         f"Version: <code>{ref}</code>\n\n"
-        "Press the button below to add the download to the queue.",
+        "Tap below to add this download to the queue.",
         reply_markup=builder.as_markup(),
         parse_mode="HTML",
     )
@@ -184,7 +184,7 @@ def source_selection_keyboard(selection_id: str, repository_id: str):
         callback_data=f"get:{selection_id}",
     )
     builder.button(
-        text="⬅️ Back to Repository",
+        text="📦 Back to Repository",
         callback_data=f"back:repo:{repository_id}",
     )
 
@@ -267,7 +267,7 @@ async def _render_release_assets(
             nav_count += 1
 
     builder.button(
-        text="⬅️ Back to Releases",
+        text="🚀 Back to Releases",
         callback_data=f"back:releases:{repository_id}",
     )
 
@@ -281,7 +281,7 @@ async def _render_release_assets(
         f"Repository: <code>{html.escape(full_name)}</code>\n"
         f"Version: <code>{html.escape(tag)}</code>\n\n"
         f"Files: {len(assets)}\n"
-        f"Select a file to download:"
+        f"Choose a file to download:"
     )
 
     if total_pages > 1:
@@ -344,7 +344,7 @@ def readme_files_keyboard(
             nav_count += 1
 
     builder.button(
-        text="⬅️ Back to Repository",
+        text="📦 Back to Repository",
         callback_data=f"back:repo:{token}",
     )
 
@@ -395,7 +395,7 @@ async def show_readme_format_options(
 
         preview_content += (
             "\n\n... Preview shortened. "
-            "Download the README to read the full file."
+            "Download the README to read the complete file."
         )
 
     preview_html = split_readme_preview(preview_content)
@@ -422,7 +422,7 @@ async def show_readme_format_options(
 @router.callback_query(F.data.startswith("back:repo:"))
 async def back_to_repository(callback: CallbackQuery):
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     token = callback.data.removeprefix("back:repo:")
@@ -436,7 +436,7 @@ async def back_to_repository(callback: CallbackQuery):
 
     if not full_name or full_name.count("/") != 1:
         await callback.answer(
-            "This selection has expired. Please search again.",
+            "This selection has expired. Please search again 🔎",
             show_alert=True,
         )
         return
@@ -458,7 +458,7 @@ async def back_to_repository(callback: CallbackQuery):
         )
         message_text = (
             f"📦 <b>{html.escape(full_name)}</b>\n\n"
-            "Repository details are temporarily unavailable.\n\n"
+            "Repository details are temporarily unavailable. Please try again shortly.\n\n"
             "<b>Choose an action below</b>"
         )
 
