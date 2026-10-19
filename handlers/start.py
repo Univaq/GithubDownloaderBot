@@ -17,8 +17,8 @@ async def start_handler(
     await state.clear()
 
     await message.answer(
-        "🐙 Welcome to GitHub Bot!\n\n"
-        "Send a GitHub repository link at any time to open it, "
+        "🐙 Welcome to GitHub Downloader!\n\n"
+        "Send a GitHub repository link anytime to explore it, "
         "or choose an option below.",
         reply_markup=main_keyboard(),
     )
