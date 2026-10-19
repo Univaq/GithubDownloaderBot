@@ -172,7 +172,7 @@ async def search_from_saved_prompt(
             status_message = await message.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Searching GitHub repositories...",
+                text="🔎 Search GitHubing GitHub…",
             )
         except TelegramBadRequest as exc:
             logger.warning(
@@ -183,7 +183,7 @@ async def search_from_saved_prompt(
     if status_message is None:
         try:
             status_message = await message.answer(
-                "Searching GitHub repositories..."
+                "🔎 Search GitHubing GitHub…"
             )
         except Exception:
             logger.exception("Could not send search status message")
@@ -210,7 +210,7 @@ async def perform_repository_search(
     if not query:
         await update_search_message(
             message,
-            "Please enter a repository name or search query.",
+            "Enter a repository name or a search query to get started.",
             edit=edit,
         )
         return
@@ -237,7 +237,7 @@ async def perform_repository_search(
     if actual_user_id is None:
         await update_search_message(
             message,
-            "Unable to identify the user.",
+            "We couldn’t identify your account. Please try again.",
             edit=edit,
         )
         return
@@ -246,7 +246,7 @@ async def perform_repository_search(
         await update_search_message(
             message,
             (
-                "You have reached the search limit. "
+                "You’ve reached the search limit. "
                 "Please wait a minute before searching again."
             ),
             edit=edit,
@@ -261,13 +261,13 @@ async def perform_repository_search(
         if edit:
             try:
                 await status_message.edit_text(
-                    "Searching GitHub repositories..."
+                    "🔎 Search GitHubing GitHub…"
                 )
             except TelegramBadRequest as exc:
                 logger.warning("Could not update search status: %s", exc)
         else:
             status_message = await message.answer(
-                "Searching GitHub repositories..."
+                "🔎 Search GitHubing GitHub…"
             )
 
     try:
@@ -332,13 +332,13 @@ async def perform_repository_search(
                         break
 
         if not repositories:
-            await status_message.edit_text("No repositories were found.")
+            await status_message.edit_text("No repositories found. Try a different name or search query.")
             return
 
         search_token = store_search_results(repositories)
 
         await status_message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,
@@ -348,18 +348,18 @@ async def perform_repository_search(
 
     except GitHubNotFoundError:
         await status_message.edit_text(
-            "❌ The requested GitHub repository was not found."
+            "We couldn’t find that GitHub repository. Check the name or link and try again."
         )
 
     except GitHubRateLimitError:
         await status_message.edit_text(
-            "⏳ GitHub rate limit reached. Please try again later."
+            "⏳ GitHub’s request limit has been reached. Please try again in a little while."
         )
 
     except GitHubError:
         logger.exception("GitHub repository lookup failed")
         await status_message.edit_text(
-            "❌ Failed to retrieve data from GitHub."
+            "We couldn’t retrieve data from GitHub. Please try again."
         )
 
     except TelegramBadRequest:
@@ -369,7 +369,7 @@ async def perform_repository_search(
         logger.exception("Unexpected repository lookup error")
         try:
             await status_message.edit_text(
-                "❌ An unexpected error occurred. Please try again later."
+                "❌ Something unexpected happened. Please try again. Please try again in a moment."
             )
         except TelegramBadRequest:
             logger.exception("Could not display the search error message")
@@ -390,7 +390,7 @@ async def search_command(
         await state.clear()
         await state.set_state("waiting_for_repository_query")
         prompt = await message.answer(
-            "🔍 Enter a repository name, search query, or GitHub URL.",
+            "🔎 Search GitHub GitHub by repository name, keywords, or a repository link.",
             reply_markup=search_mode_keyboard(),
         )
         await state.update_data(
@@ -430,7 +430,7 @@ async def search_from_text(
 
     if not query:
         await message.answer(
-            "Please enter a repository name or search query."
+            "Enter a repository name or a search query to get started."
         )
         return
 
@@ -464,7 +464,7 @@ async def automatic_github_link_handler(
 @router.callback_query(F.data == "search:again")
 async def search_again(callback: CallbackQuery, state: FSMContext) -> None:
     if callback.message is None:
-        await callback.answer("Message unavailable.", show_alert=True)
+        await callback.answer("This message is no longer available. Please open the menu again.", show_alert=True)
         return
 
     await callback.answer()
@@ -476,7 +476,7 @@ async def search_again(callback: CallbackQuery, state: FSMContext) -> None:
 
     try:
         await callback.message.edit_text(
-            "🔎 Send a repository name, search query, or GitHub URL:",
+            "🔎 Send a repository name, a search query, or a GitHub link to get started.",
             reply_markup=search_mode_keyboard(),
         )
     except TelegramBadRequest as exc:
@@ -486,39 +486,39 @@ async def search_again(callback: CallbackQuery, state: FSMContext) -> None:
 @router.callback_query(F.data.startswith("search_page:"))
 async def change_search_page(callback: CallbackQuery) -> None:
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
         _, search_token, page_text = callback.data.split(":", 2)
         page = int(page_text)
     except (ValueError, TypeError):
-        await callback.answer("Invalid page selection.", show_alert=True)
+        await callback.answer("That page selection isn’t valid.", show_alert=True)
         return
 
     if page < 0:
-        await callback.answer("Invalid page number.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     repositories = get_search_results(search_token)
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
 
     total_pages = max(1, (len(repositories) + 9) // 10)
     if page >= total_pages:
-        await callback.answer("This page does not exist.", show_alert=True)
+        await callback.answer("That page doesn’t exist. Please choose another page.", show_alert=True)
         return
 
     await callback.answer()
 
     try:
         await callback.message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,
@@ -532,21 +532,21 @@ async def change_search_page(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("search_info:"))
 async def search_page_info(callback: CallbackQuery) -> None:
     if not callback.data:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
         _, search_token, page_text = callback.data.split(":", 2)
         page = int(page_text)
     except (ValueError, TypeError):
-        await callback.answer("Invalid page selection.", show_alert=True)
+        await callback.answer("That page selection isn’t valid.", show_alert=True)
         return
 
     repositories = get_search_results(search_token)
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
@@ -554,7 +554,7 @@ async def search_page_info(callback: CallbackQuery) -> None:
     total_pages = max(1, (len(repositories) + 9) // 10)
 
     if page < 0 or page >= total_pages:
-        await callback.answer("Invalid page number.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     await callback.answer(f"Page {page + 1}/{total_pages}")
@@ -565,7 +565,7 @@ async def back_to_search_results(
     callback: CallbackQuery,
 ) -> None:
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     search_token = callback.data.removeprefix("back:search:")
@@ -573,7 +573,7 @@ async def back_to_search_results(
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
@@ -582,7 +582,7 @@ async def back_to_search_results(
 
     try:
         await callback.message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,
