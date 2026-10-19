@@ -172,7 +172,7 @@ async def search_from_saved_prompt(
             status_message = await message.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="🔎 Search GitHubing GitHub…",
+                text="🔎 Searching GitHub…",
             )
         except TelegramBadRequest as exc:
             logger.warning(
@@ -183,7 +183,7 @@ async def search_from_saved_prompt(
     if status_message is None:
         try:
             status_message = await message.answer(
-                "🔎 Search GitHubing GitHub…"
+                "🔎 Searching GitHub…"
             )
         except Exception:
             logger.exception("Could not send search status message")
@@ -261,13 +261,13 @@ async def perform_repository_search(
         if edit:
             try:
                 await status_message.edit_text(
-                    "🔎 Search GitHubing GitHub…"
+                    "🔎 Searching GitHub…"
                 )
             except TelegramBadRequest as exc:
                 logger.warning("Could not update search status: %s", exc)
         else:
             status_message = await message.answer(
-                "🔎 Search GitHubing GitHub…"
+                "🔎 Searching GitHub…"
             )
 
     try:
@@ -390,7 +390,7 @@ async def search_command(
         await state.clear()
         await state.set_state("waiting_for_repository_query")
         prompt = await message.answer(
-            "🔎 Search GitHub GitHub by repository name, keywords, or a repository link.",
+            "🔎 Search GitHub by repository name, keywords, or a repository link.",
             reply_markup=search_mode_keyboard(),
         )
         await state.update_data(
