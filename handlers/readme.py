@@ -325,13 +325,13 @@ async def choose_readme_format(callback: CallbackQuery):
             filename=filename,
         )
 
-        # Remove the temporary status message so the completion prompt is
-        # created after the document, at the end of the chat.
-        await message.delete()
         await message.answer_document(
             document=document,
             caption=f"README for {full_name}",
         )
+        # Remove the temporary status message only after the document was
+        # sent successfully, then place the completion prompt at the end.
+        await message.delete()
         await message.answer(
             "✅ README downloaded successfully. What would you like to do next?",
             reply_markup=download_completion_keyboard(
