@@ -44,9 +44,9 @@ async def select_repository(callback: CallbackQuery):
 
     except GitHubRateLimitError:
         message_text = (
-            f"📁 <b>{html.escape(full_name)}</b>\n\n"
-            "⚠️ GitHub rate limit reached. "
-            "Repository details are temporarily unavailable. Please try again shortly.\n\n"
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
+            "⚠️ GitHub’s request limit has been reached. "
+            "Repository details are temporarily unavailable. Please try again shortly. Please try again shortly.\n\n"
             "<b>Choose an action below</b>"
         )
 
@@ -56,7 +56,7 @@ async def select_repository(callback: CallbackQuery):
             full_name,
         )
         message_text = (
-            f"📁 <b>{html.escape(full_name)}</b>\n\n"
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
             "⚠️ We couldn’t load the repository details. Please try again.\n\n"
             "<b>Choose an action below</b>"
         )
@@ -67,7 +67,7 @@ async def select_repository(callback: CallbackQuery):
             full_name,
         )
         message_text = (
-            f"📁 <b>{html.escape(full_name)}</b>\n\n"
+            f"📦 <b>{html.escape(full_name)}</b>\n\n"
             "⚠️ Something went wrong while loading the repository details.\n\n"
             "<b>Choose an action below</b>"
         )
