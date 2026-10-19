@@ -12,7 +12,7 @@ router = Router(name="source_code")
 @router.callback_query(F.data.startswith("choice:src:"))
 async def choose_source_code(callback: CallbackQuery):
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     token = callback.data.removeprefix("choice:src:")
@@ -20,7 +20,7 @@ async def choose_source_code(callback: CallbackQuery):
 
     if full_name is None:
         await callback.answer(
-            "This selection has expired. Please search again.",
+            "This selection has expired. Please search again 🔎",
             show_alert=True,
         )
         return
