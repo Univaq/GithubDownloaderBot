@@ -101,6 +101,7 @@ async def main() -> None:
         await bot.set_my_commands([
             BotCommand(command="start", description="Open GitHub Downloader"),
             BotCommand(command="repo", description="Search GitHub repositories"),
+            BotCommand(command="menu", description="Open the main menu"),
         ])
 
         bot_info = await bot.get_me()
