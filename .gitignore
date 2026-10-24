@@ -1,9 +1,9 @@
-# Secrets and environment files
+# Secrets and environment
 .env
 .env.*
 !.env.example
 
-# Python bytecode and test tooling
+# Python
 __pycache__/
 *.py[cod]
 *.pyd
@@ -13,7 +13,7 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Virtual environments
+# Environments
 .venv/
 venv/
 env/
@@ -24,7 +24,7 @@ data/*.db-*
 downloads/
 *.tmp
 
-# IDE and OS files
+# IDE and OS
 .idea/
 .vscode/
 .DS_Store

@@ -21,6 +21,7 @@ from services.callback_cache import (
     get_search_results,
     store_search_results,
 )
+from services.repository_presenter import format_repository_card
 from services.github import (
     GitHubError,
     GitHubNotFoundError,
@@ -91,10 +92,13 @@ def extract_github_repository(text: str) -> tuple[str, str] | None:
 
     parts = parsed.path.strip("/").split("/")
 
-    if len(parts) != 2:
+    # GitHub repository links may point to a branch, directory, file, or tab,
+    # e.g. /owner/repo/tree/feature/my-branch. The repository identity is
+    # always the first two path segments; the rest is repository navigation.
+    if len(parts) < 2:
         return None
 
-    owner, repo = parts
+    owner, repo = parts[:2]
 
     if repo.endswith(".git"):
         repo = repo[:-4]
@@ -140,7 +144,20 @@ async def update_search_message(
             parse_mode=parse_mode,
         )
     except TelegramBadRequest as exc:
-        logger.warning("Could not edit search message: %s", exc)
+        error_text = str(exc).lower()
+        if "message is not modified" in error_text:
+            return message
+
+        logger.warning("Could not edit search message; sending a replacement: %s", exc)
+        try:
+            return await message.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        except Exception:
+            logger.exception("Could not send replacement search message")
+            return None
 
     return message
 
@@ -155,6 +172,12 @@ async def search_from_saved_prompt(
     chat_id = data.get("search_prompt_chat_id")
     message_id = data.get("search_prompt_message_id")
 
+    # Remove the user's query message so the chat only shows the search results.
+    try:
+        await message.delete()
+    except TelegramBadRequest as exc:
+        logger.debug("Could not delete the user's search query: %s", exc)
+
     await state.clear()
 
     user_id = message.from_user.id if message.from_user else None
@@ -165,7 +188,7 @@ async def search_from_saved_prompt(
             status_message = await message.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Searching GitHub repositories...",
+                text="🔎 Searching GitHub…",
             )
         except TelegramBadRequest as exc:
             logger.warning(
@@ -176,7 +199,7 @@ async def search_from_saved_prompt(
     if status_message is None:
         try:
             status_message = await message.answer(
-                "Searching GitHub repositories..."
+                "🔎 Searching GitHub…"
             )
         except Exception:
             logger.exception("Could not send search status message")
@@ -203,7 +226,7 @@ async def perform_repository_search(
     if not query:
         await update_search_message(
             message,
-            "Please enter a repository name or search query.",
+            "Enter a repository name or a search query to get started.",
             edit=edit,
         )
         return
@@ -230,7 +253,7 @@ async def perform_repository_search(
     if actual_user_id is None:
         await update_search_message(
             message,
-            "Unable to identify the user.",
+            "We couldn’t identify your account. Please try again.",
             edit=edit,
         )
         return
@@ -239,7 +262,7 @@ async def perform_repository_search(
         await update_search_message(
             message,
             (
-                "You have reached the search limit. "
+                "You’ve reached the search limit. "
                 "Please wait a minute before searching again."
             ),
             edit=edit,
@@ -254,17 +277,28 @@ async def perform_repository_search(
         if edit:
             try:
                 await status_message.edit_text(
-                    "Searching GitHub repositories..."
+                    "🔎 Searching GitHub…"
                 )
             except TelegramBadRequest as exc:
                 logger.warning("Could not update search status: %s", exc)
         else:
             status_message = await message.answer(
-                "Searching GitHub repositories..."
+                "🔎 Searching GitHub…"
             )
 
     try:
         repository_info = extract_github_repository(query)
+
+        # Accept owner/repository as an exact lookup as well as a full URL.
+        if repository_info is None:
+            plain_repo = query.strip().strip("/")
+            if re.fullmatch(
+                r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9_.-]+",
+                plain_repo,
+            ):
+                owner_part, repo_part = plain_repo.split("/", 1)
+                if repo_part not in {".", ".."} and not repo_part.endswith("."):
+                    repository_info = (owner_part, repo_part)
 
         async with GitHubService() as github:
             if repository_info:
@@ -277,30 +311,50 @@ async def perform_repository_search(
                 )
 
                 await status_message.edit_text(
-                    f"📦 <b>{repository['full_name']}</b>\n\n"
-                    "Choose what you want to download:",
+                    format_repository_card(repository["full_name"], repository),
                     reply_markup=repository_action_keyboard(
                         repository["full_name"],
                         is_favorite=favorite_status,
                     ),
                     parse_mode="HTML",
+                    disable_web_page_preview=True,
                 )
                 return
 
-            # Request up to 100 results where supported by GitHubService.
+            # Fetch at most two API pages, with ten repositories per page.
+            # GitHub's default best-match ranking is more useful for names
+            # such as "Pattng" than sorting every query by star count.
+            # Search repository names first. Generic GitHub search can bury
+            # a small/exact project name under README and description matches.
             repositories = await github.search_repositories(
-                query,
-                per_page=100,
+                f"{query} in:name",
+                per_page=10,
+                max_results=20,
             )
 
+            if len(repositories) < 20:
+                broad_results = await github.search_repositories(
+                    query,
+                    per_page=10,
+                    max_results=20,
+                )
+                seen = {item["full_name"].casefold() for item in repositories}
+                for item in broad_results:
+                    key = item["full_name"].casefold()
+                    if key not in seen:
+                        repositories.append(item)
+                        seen.add(key)
+                    if len(repositories) >= 20:
+                        break
+
         if not repositories:
-            await status_message.edit_text("No repositories were found.")
+            await status_message.edit_text("No repositories found. Try another name or keyword.")
             return
 
         search_token = store_search_results(repositories)
 
         await status_message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,
@@ -310,18 +364,18 @@ async def perform_repository_search(
 
     except GitHubNotFoundError:
         await status_message.edit_text(
-            "❌ The requested GitHub repository was not found."
+            "We couldn’t find that GitHub repository. Check the name or link and try again."
         )
 
     except GitHubRateLimitError:
         await status_message.edit_text(
-            "⏳ GitHub rate limit reached. Please try again later."
+            "⏳ GitHub’s request limit has been reached. Please try again in a little while."
         )
 
     except GitHubError:
         logger.exception("GitHub repository lookup failed")
         await status_message.edit_text(
-            "❌ Failed to retrieve data from GitHub."
+            "We couldn’t retrieve data from GitHub. Please try again."
         )
 
     except TelegramBadRequest:
@@ -331,7 +385,7 @@ async def perform_repository_search(
         logger.exception("Unexpected repository lookup error")
         try:
             await status_message.edit_text(
-                "❌ An unexpected error occurred. Please try again later."
+                "Something unexpected happened. Please try again in a moment."
             )
         except TelegramBadRequest:
             logger.exception("Could not display the search error message")
@@ -352,7 +406,7 @@ async def search_command(
         await state.clear()
         await state.set_state("waiting_for_repository_query")
         prompt = await message.answer(
-            "🔍 Enter a repository name, search query, or GitHub URL.",
+            "🔎 Search GitHub by repository name, keywords, or a repository link.",
             reply_markup=search_mode_keyboard(),
         )
         await state.update_data(
@@ -392,7 +446,7 @@ async def search_from_text(
 
     if not query:
         await message.answer(
-            "Please enter a repository name or search query."
+            "Enter a repository name or a search query to get started."
         )
         return
 
@@ -423,42 +477,64 @@ async def automatic_github_link_handler(
     )
 
 
+@router.callback_query(F.data == "search:again")
+async def search_again(callback: CallbackQuery, state: FSMContext) -> None:
+    if callback.message is None:
+        await callback.answer("This message is no longer available. Please open the menu again.", show_alert=True)
+        return
+
+    await callback.answer()
+    await state.set_state("waiting_for_repository_query")
+    await state.update_data(
+        search_prompt_chat_id=callback.message.chat.id,
+        search_prompt_message_id=callback.message.message_id,
+    )
+
+    try:
+        await callback.message.edit_text(
+            "🔎 Send a repository name, a search query, or a GitHub link to get started.",
+            reply_markup=search_mode_keyboard(),
+        )
+    except TelegramBadRequest as exc:
+        logger.warning("Could not display the search-again prompt: %s", exc)
+
+
 @router.callback_query(F.data.startswith("search_page:"))
 async def change_search_page(callback: CallbackQuery) -> None:
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
         _, search_token, page_text = callback.data.split(":", 2)
         page = int(page_text)
     except (ValueError, TypeError):
-        await callback.answer("Invalid page selection.", show_alert=True)
+        await callback.answer("That page selection isn’t valid.", show_alert=True)
         return
 
     if page < 0:
-        await callback.answer("Invalid page number.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     repositories = get_search_results(search_token)
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
 
     total_pages = max(1, (len(repositories) + 9) // 10)
     if page >= total_pages:
-        await callback.answer("This page does not exist.", show_alert=True)
+        await callback.answer("That page doesn’t exist. Please choose another page.", show_alert=True)
         return
 
     await callback.answer()
 
     try:
         await callback.message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,
@@ -472,21 +548,21 @@ async def change_search_page(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("search_info:"))
 async def search_page_info(callback: CallbackQuery) -> None:
     if not callback.data:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     try:
         _, search_token, page_text = callback.data.split(":", 2)
         page = int(page_text)
     except (ValueError, TypeError):
-        await callback.answer("Invalid page selection.", show_alert=True)
+        await callback.answer("That page selection isn’t valid.", show_alert=True)
         return
 
     repositories = get_search_results(search_token)
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
@@ -494,7 +570,7 @@ async def search_page_info(callback: CallbackQuery) -> None:
     total_pages = max(1, (len(repositories) + 9) // 10)
 
     if page < 0 or page >= total_pages:
-        await callback.answer("Invalid page number.", show_alert=True)
+        await callback.answer("That page number isn’t valid.", show_alert=True)
         return
 
     await callback.answer(f"Page {page + 1}/{total_pages}")
@@ -505,7 +581,7 @@ async def back_to_search_results(
     callback: CallbackQuery,
 ) -> None:
     if not callback.data or callback.message is None:
-        await callback.answer("Invalid request.", show_alert=True)
+        await callback.answer("That action didn’t work. Please try again.", show_alert=True)
         return
 
     search_token = callback.data.removeprefix("back:search:")
@@ -513,7 +589,7 @@ async def back_to_search_results(
 
     if repositories is None:
         await callback.answer(
-            "These search results have expired. Please search again.",
+            "These search results have expired. Please start a new search and try again 🔎",
             show_alert=True,
         )
         return
@@ -522,7 +598,7 @@ async def back_to_search_results(
 
     try:
         await callback.message.edit_text(
-            "📚 Select a repository from the list below:",
+            "📚 Here are the matching repositories. Choose one to continue:",
             reply_markup=repository_keyboard(
                 repositories,
                 search_token,

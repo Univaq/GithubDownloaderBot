@@ -164,7 +164,7 @@ class GitHubService:
         self,
         query: str,
         per_page: int = 100,
-        max_results: int = 100,
+        max_results: int = 20,
     ) -> list[dict]:
         """Fetch repository search results across GitHub API pages."""
         query = query.strip()
@@ -186,8 +186,8 @@ class GitHubService:
                 "/search/repositories",
                 params={
                     "q": query,
-                    "sort": "stars",
-                    "order": "desc",
+                    # Use GitHub default best-match ranking, so exact/name
+                    # matches are not buried behind higher-star repositories.
                     "per_page": page_size,
                     "page": page,
                 },

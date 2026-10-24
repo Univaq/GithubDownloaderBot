@@ -3,17 +3,24 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
 from config import settings
 from handlers.start import router as start_router
 from handlers.search import router as search_router
+from handlers.repository import router as repository_router
+from handlers.source_code import router as source_code_router
 from handlers.releases import router as releases_router
+from handlers.release_assets import router as release_assets_router
+from handlers.readme import router as readme_router
 from handlers.menu import router as menu_router
 from handlers.favorites import router as favorites_router
 from repositories.jobs import initialize_database
 from workers.download_worker import worker_loop
+from github_bot.infrastructure.database.sqlite_job_repository import SQLiteJobRepository
+from github_bot.workers.legacy_worker_gateway import LegacyWorkerJobGateway
 
 
 logging.basicConfig(
@@ -68,16 +75,35 @@ async def main() -> None:
 
     dp.include_router(start_router)
     dp.include_router(search_router)
+    dp.include_router(repository_router)
+    dp.include_router(source_code_router)
     dp.include_router(releases_router)
+    dp.include_router(release_assets_router)
+    dp.include_router(readme_router)
     dp.include_router(menu_router)
     dp.include_router(favorites_router)
 
+    job_gateway = None
+    if settings.use_sqlite_worker_gateway:
+        job_gateway = LegacyWorkerJobGateway(
+            SQLiteJobRepository(settings.database_path)
+        )
+        logger.warning(
+            "Using the new SQLite worker gateway; monitor job processing closely."
+        )
+
     worker_task = asyncio.create_task(
-        worker_loop(bot, stop_event),
+        worker_loop(bot, stop_event, job_gateway=job_gateway),
         name="download-worker",
     )
 
     try:
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Open GitHub Downloader"),
+            BotCommand(command="repo", description="Search GitHub repositories"),
+            BotCommand(command="menu", description="Open the main menu"),
+        ])
+
         bot_info = await bot.get_me()
         logger.info(
             "Bot is ready: @%s",

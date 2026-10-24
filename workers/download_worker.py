@@ -3,13 +3,16 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from typing import Protocol
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import aiofiles
 from aiogram import Bot
 from aiogram.types.input_file import InputFile
 
 from config import settings
+from keyboards.inline import download_completion_keyboard
 from repositories.jobs import claim_next_job, fail_job, finish_job
 from services.downloader import download_to_temp, delete_temp_file
 
@@ -17,6 +20,29 @@ from services.downloader import download_to_temp, delete_temp_file
 logger = logging.getLogger(__name__)
 
 UploadProgress = Callable[[int], Awaitable[None]]
+
+
+class WorkerJobGateway(Protocol):
+    """Persistence operations required by worker orchestration."""
+
+    async def claim_next_payload(self) -> dict[str, object] | None: ...
+
+    async def mark_completed(self, job_id: int) -> bool: ...
+
+    async def mark_failed(self, job_id: int, error: str) -> bool: ...
+
+
+class LegacyWorkerPersistence:
+    """Adapt the existing repository functions to the worker gateway contract."""
+
+    async def claim_next_payload(self) -> dict[str, object] | None:
+        return await claim_next_job()
+
+    async def mark_completed(self, job_id: int) -> bool:
+        return await finish_job(job_id)
+
+    async def mark_failed(self, job_id: int, error: str) -> bool:
+        return await fail_job(job_id, error)
 
 
 class ProgressInputFile(InputFile):
@@ -67,6 +93,50 @@ def make_progress_bar(
     return "█" * filled + "░" * (width - filled)
 
 
+def repository_from_download_url(download_url: str) -> str | None:
+    """Infer owner/repository from common GitHub archive and release URLs."""
+    try:
+        parsed = urlparse(download_url)
+    except (TypeError, ValueError):
+        return None
+
+    host = (parsed.hostname or "").lower()
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+
+    if host == "api.github.com" and len(parts) >= 4 and parts[0] == "repos":
+        owner, repo = parts[1], parts[2]
+    elif host in {"github.com", "www.github.com", "codeload.github.com"} and len(parts) >= 2:
+        owner, repo = parts[0], parts[1]
+    else:
+        return None
+
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+
+    if not owner or not repo:
+        return None
+
+    return f"{owner}/{repo}"
+
+
+def release_tag_from_download_url(download_url: str) -> str | None:
+    """Extract the tag from a GitHub release asset download URL."""
+    try:
+        parsed = urlparse(download_url)
+    except (TypeError, ValueError):
+        return None
+
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if (
+        (parsed.hostname or "").lower() in {"github.com", "www.github.com"}
+        and len(parts) >= 5
+        and parts[2:4] == ["releases", "download"]
+    ):
+        return unquote(parts[4])
+
+    return None
+
+
 async def process_download_job(bot: Bot, job: dict) -> None:
     path: Path | None = None
     progress_message = None
@@ -75,13 +145,13 @@ async def process_download_job(bot: Bot, job: dict) -> None:
         progress_message = await bot.send_message(
             chat_id=job["chat_id"],
             text=(
-                "DOWNLOAD MANAGER\n"
+                "📥 DOWNLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
-                "Status: Connecting to GitHub...\n"
+                "Status: Connecting to GitHub…\n"
                 f"{make_progress_bar(0)} 0.0%\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Downloaded: 0.00 MB\n"
-                "Speed: Calculating...\n"
+                "Speed: Calculating…\n"
                 "Source: GitHub"
             ),
         )
@@ -133,10 +203,10 @@ async def process_download_job(bot: Bot, job: dict) -> None:
                 )
             else:
                 size_text = f"Downloaded: {downloaded_mb:.2f} MB"
-                progress_text = "Progress: Receiving data..."
+                progress_text = "Progress: Receiving data…"
 
             text = (
-                "DOWNLOAD MANAGER\n"
+                "📥 DOWNLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Status: Downloading from GitHub\n"
                 f"{progress_text}\n"
@@ -176,13 +246,13 @@ async def process_download_job(bot: Bot, job: dict) -> None:
         upload_speed = 0.0
 
         await progress_message.edit_text(
-            "UPLOAD MANAGER\n"
+            "📤 UPLOAD\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "Status: Preparing file for Telegram\n"
+            "Status: Preparing your file for Telegram\n"
             f"{make_progress_bar(0)} 0.0%\n"
             "━━━━━━━━━━━━━━━━━━\n"
             f"File size: {size / (1024 * 1024):.2f} MB\n"
-            "Speed: Calculating...\n"
+            "Speed: Calculating…\n"
             "Destination: Telegram"
         )
 
@@ -211,7 +281,7 @@ async def process_download_job(bot: Bot, job: dict) -> None:
             speed_mb = upload_speed / (1024 * 1024)
 
             text = (
-                "UPLOAD MANAGER\n"
+                "📤 UPLOAD\n"
                 "━━━━━━━━━━━━━━━━━━\n"
                 "Status: Uploading to Telegram\n"
                 f"{make_progress_bar(percent)} {percent:.1f}%\n"
@@ -237,8 +307,25 @@ async def process_download_job(bot: Bot, job: dict) -> None:
                 filename=job.get("file_name") or path.name,
                 progress_callback=on_upload_progress,
             ),
-            caption="Download from GitHub completed successfully.",
+            caption="Your GitHub file is ready to go!",
         )
+
+        download_url = str(job.get("repo_url") or "")
+        full_name = repository_from_download_url(download_url)
+        release_tag = release_tag_from_download_url(download_url)
+        try:
+            await bot.send_message(
+                chat_id=job["chat_id"],
+                text="✅ Your file is ready! What would you like to do next?",
+                reply_markup=download_completion_keyboard(
+                    full_name,
+                    release_tag=release_tag,
+                ),
+            )
+        except Exception:
+            # The file is already delivered; a follow-up prompt failure must
+            # not turn a successful download into a failed job.
+            logger.exception("Could not send post-download action buttons")
 
     finally:
         if progress_message is not None:
@@ -280,10 +367,16 @@ async def process_download_job(bot: Bot, job: dict) -> None:
 async def worker_loop(
     bot: Bot,
     stop_event: asyncio.Event,
+    *,
+    job_gateway: WorkerJobGateway | None = None,
 ) -> None:
+    """Run the worker through one gateway; legacy persistence remains default."""
+    gateway: WorkerJobGateway = (
+        job_gateway if job_gateway is not None else LegacyWorkerPersistence()
+    )
     while not stop_event.is_set():
         try:
-            job = await claim_next_job()
+            job = await gateway.claim_next_payload()
         except Exception:
             logger.exception(
                 "Could not claim the next download job"
@@ -320,7 +413,7 @@ async def worker_loop(
             )
 
             try:
-                marked_failed = await fail_job(
+                marked_failed = await gateway.mark_failed(
                     job["id"],
                     str(exc),
                 )
@@ -340,8 +433,8 @@ async def worker_loop(
                 await bot.send_message(
                     chat_id=job["chat_id"],
                     text=(
-                        "Download or upload failed. "
-                        "Please try again later."
+                        "We couldn’t complete your download. "
+                        "Please try again in a moment."
                     ),
                 )
             except Exception:
@@ -351,7 +444,7 @@ async def worker_loop(
 
         else:
             try:
-                marked_completed = await finish_job(job["id"])
+                marked_completed = await gateway.mark_completed(job["id"])
 
                 if not marked_completed:
                     logger.error(

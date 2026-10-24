@@ -28,7 +28,7 @@ def _validate_callback_data(callback_data: str) -> str:
 def add_back_button(
     builder: InlineKeyboardBuilder,
     callback_data: str,
-    text: str = "⬅️ Back",
+    text: str = "↩️ Back",
 ) -> None:
     builder.button(
         text=text[:MAX_BUTTON_TEXT_LENGTH],
@@ -51,7 +51,7 @@ def _add_pagination_buttons(
 
     if page > 0:
         builder.button(
-            text="⬅️ Previous",
+            text="← Previous",
             callback_data=_validate_callback_data(previous_callback),
         )
 
@@ -62,7 +62,7 @@ def _add_pagination_buttons(
 
     if page < total_pages - 1:
         builder.button(
-            text="Next ➡️",
+            text="Next →",
             callback_data=_validate_callback_data(next_callback),
         )
 
@@ -72,7 +72,7 @@ def pagination_keyboard(
     page: int,
     callback_prefix: str,
     back_callback: str,
-    back_text: str = "⬅️ Back",
+    back_text: str = "↩️ Back",
     page_size: int = ITEMS_PER_PAGE,
     item_callback=None,
     item_text=None,
@@ -170,10 +170,15 @@ def repository_keyboard(
         next_callback=f"search_page:{search_token}:{page + 1}",
     )
 
+    builder.button(
+        text="🔎 Search GitHub Again",
+        callback_data=_validate_callback_data("search:again"),
+    )
+
     add_back_button(
         builder,
         "menu:main",
-        "⬅️ Back to Menu",
+        "🏠 Main Menu",
     )
 
     builder.adjust(1)
@@ -193,18 +198,18 @@ def repository_action_keyboard(
     favorite_text = (
         "❌ Remove from Favorites"
         if is_favorite
-        else "⭐ Add to Favorites"
+        else "⭐ Save to Favorites"
     )
 
     builder.button(
-        text="📥 Download Source Code",
+        text="📦 Download Source Code",
         callback_data=_validate_callback_data(
             f"choice:src:{repository_id}"
         ),
     )
 
     builder.button(
-        text="🚀 Browse Releases",
+        text="🚀 Explore Releases",
         callback_data=_validate_callback_data(
             f"choice:rel:{repository_id}"
         ),
@@ -228,13 +233,13 @@ def repository_action_keyboard(
         add_back_button(
             builder,
             f"back:search:{search_token}",
-            "⬅️ Back to Search Results",
+            "🔎 Back to Results",
         )
     else:
         add_back_button(
             builder,
             "menu:main",
-            "⬅️ Back to Menu",
+            "🏠 Main Menu",
         )
 
     builder.adjust(1)
@@ -291,7 +296,7 @@ def releases_keyboard(
     add_back_button(
         builder,
         f"back:repo:{repository_id}",
-        "⬅️ Back to Repository",
+        "📦 Back to Repository",
     )
 
     builder.adjust(1)
@@ -322,7 +327,7 @@ def readme_download_keyboard(
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="📥 Download README (.md)",
+        text="📄 Download README (.md)",
         callback_data=_validate_callback_data(
             f"readme_fmt:md:{token}:0"
         ),
@@ -331,7 +336,7 @@ def readme_download_keyboard(
     add_back_button(
         builder,
         f"back:repo:{repository_id}",
-        "⬅️ Back to Repository",
+        "📦 Back to Repository",
     )
 
     builder.adjust(1)
@@ -344,8 +349,53 @@ def search_keyboard() -> InlineKeyboardMarkup:
     add_back_button(
         builder,
         "menu:main",
-        "⬅️ Back to Menu",
+        "🏠 Main Menu",
     )
 
     builder.adjust(1)
     return builder.as_markup()
+
+def download_completion_keyboard(
+    full_name: str | None,
+    *,
+    release_tag: str | None = None,
+    readme: bool = False,
+) -> InlineKeyboardMarkup:
+    """Actions shown after a downloaded file has been sent."""
+    builder = InlineKeyboardBuilder()
+
+    if full_name and full_name.count("/") == 1:
+        repository_id = store_repository(full_name)
+        repository_ref = (
+            full_name
+            if len(f"back:repo:{full_name}".encode("utf-8")) <= CALLBACK_MAX_BYTES
+            else repository_id
+        )
+
+        if not readme and release_tag:
+            callback_data = f"download:another:{full_name}:{release_tag}"
+            if len(callback_data.encode("utf-8")) <= CALLBACK_MAX_BYTES:
+                builder.button(
+                    text="📥 Download Another File",
+                    callback_data=callback_data,
+                )
+
+        builder.button(
+            text="📦 Back to Repository",
+            callback_data=_validate_callback_data(
+                f"back:repo:{repository_ref}"
+            ),
+        )
+    else:
+        builder.button(
+            text="🔎 Search GitHub Again",
+            callback_data=_validate_callback_data("search:again"),
+        )
+
+    builder.button(
+        text="🏠 Main Menu",
+        callback_data=_validate_callback_data("menu:main"),
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
